@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Loan_Product__c</fullName>
+    <label>Loan Product</label>
+    <referenceTo>Loan_Product__c</referenceTo>
+    <relationshipLabel>Loan Applications</relationshipLabel>
+    <relationshipName>Loan_Applications</relationshipName>
+    <deleteConstraint>Restrict</deleteConstraint>
+    <type>Lookup</type>
+    <required>true</required>
+</CustomField>

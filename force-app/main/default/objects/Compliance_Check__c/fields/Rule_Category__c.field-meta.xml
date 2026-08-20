@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Rule_Category__c</fullName>
+    <label>Rule Category</label>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+        <value>
+            <fullName>KYC</fullName>
+            <default>false</default>
+            <label>KYC</label>
+        </value>
+        <value>
+            <fullName>RBI Digital Lending</fullName>
+            <default>false</default>
+            <label>RBI Digital Lending</label>
+        </value>
+        <value>
+            <fullName>AML</fullName>
+            <default>false</default>
+            <label>AML</label>
+        </value>
+        <value>
+            <fullName>Internal Policy</fullName>
+            <default>false</default>
+            <label>Internal Policy</label>
+        </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

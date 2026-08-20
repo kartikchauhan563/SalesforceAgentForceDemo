@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Override_Reason_Required</fullName>
+    <active>true</active>
+    <description>Override reason required when officer override is checked</description>
+    <errorConditionFormula>AND(Officer_Override__c, ISBLANK(Override_Reason__c))</errorConditionFormula>
+    <errorDisplayField>Override_Reason__c</errorDisplayField>
+    <errorMessage>Override reason is required when Officer Override is checked.</errorMessage>
+</ValidationRule>

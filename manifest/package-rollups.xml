@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <!-- Phase 2: Deploy roll-up summary fields AFTER main package.xml succeeds -->
+    <types>
+        <members>Loan_Application__c.Total_Documents_Count__c</members>
+        <members>Loan_Application__c.Verified_Documents_Count__c</members>
+        <members>Loan_Application__c.Missing_Documents_Count__c</members>
+        <members>Loan_Application__c.Total_Agent_Score__c</members>
+        <members>Loan_Application__c.Failed_Agents_Count__c</members>
+        <members>Loan_Application__c.Compliance_Issues_Count__c</members>
+        <name>CustomField</name>
+    </types>
+    <version>66.0</version>
+</Package>

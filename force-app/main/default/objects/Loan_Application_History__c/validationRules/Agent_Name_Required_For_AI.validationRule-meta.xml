@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Agent_Name_Required_For_AI</fullName>
+    <active>true</active>
+    <description>Agent name required when triggered by AI Agent</description>
+    <errorConditionFormula>AND(ISPICKVAL(Triggered_By__c, &quot;AI Agent&quot;), ISPICKVAL(Agent_Name__c, &quot;&quot;))</errorConditionFormula>
+    <errorDisplayField>Agent_Name__c</errorDisplayField>
+    <errorMessage>Agent Name is required when Triggered By is AI Agent.</errorMessage>
+</ValidationRule>

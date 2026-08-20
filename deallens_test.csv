@@ -1,0 +1,11 @@
+Customer Name,Revenue Period,Revenue Amount,Product,Region,Segment
+ABC Corp,2025-01-01,100000,Product A,US,Enterprise
+ABC Corp,2025-02-01,120000,Product A,US,Enterprise
+Global Tech,2025-01-01,90000,Product A,US,Enterprise
+Global Tech,2025-02-01,70000,Product A,US,Enterprise
+Northstar Inc,2025-01-01,80000,Product B,UK,Enterprise
+Bright Retail,2025-01-01,30000,Product C,US,Mid-Market
+Bright Retail,2025-02-01,45000,Product C,US,Mid-Market
+Acme Ltd,2025-01-01,25000,Product C,India,SMB
+Acme Ltd,2025-02-01,10000,Product C,India,SMB
+FutureWorks,2025-02-01,35000,Product A,US,Mid-Market

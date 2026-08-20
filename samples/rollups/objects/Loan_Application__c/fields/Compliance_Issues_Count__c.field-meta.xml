@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Compliance_Issues_Count__c</fullName>
+    <label>Compliance Issues Count</label>
+    <summaryForeignKey>Compliance_Check__c.Loan_Application__c</summaryForeignKey>
+    <summaryOperation>count</summaryOperation>
+    <summaryFilterItems>
+        <field>Status__c</field>
+        <operation>equals</operation>
+        <value>Non-Compliant</value>
+    </summaryFilterItems>
+    <type>Summary</type>
+</CustomField>

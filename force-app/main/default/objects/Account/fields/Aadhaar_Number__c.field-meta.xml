@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Aadhaar_Number__c</fullName>
+    <label>Aadhaar Number</label>
+    <length>12</length>
+    <maskChar>asterisk</maskChar>
+    <maskType>lastFour</maskType>
+    <type>EncryptedText</type>
+</CustomField>

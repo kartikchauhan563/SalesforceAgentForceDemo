@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Document_Type__c</fullName>
+    <label>Document Type</label>
+    <type>Picklist</type>
+    <required>true</required>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+        <value>
+            <fullName>PAN Card</fullName>
+            <default>false</default>
+            <label>PAN Card</label>
+        </value>
+        <value>
+            <fullName>Aadhaar Card</fullName>
+            <default>false</default>
+            <label>Aadhaar Card</label>
+        </value>
+        <value>
+            <fullName>Passport</fullName>
+            <default>false</default>
+            <label>Passport</label>
+        </value>
+        <value>
+            <fullName>Driving License</fullName>
+            <default>false</default>
+            <label>Driving License</label>
+        </value>
+        <value>
+            <fullName>Voter ID</fullName>
+            <default>false</default>
+            <label>Voter ID</label>
+        </value>
+        <value>
+            <fullName>Bank Statement 3 months</fullName>
+            <default>false</default>
+            <label>Bank Statement 3 months</label>
+        </value>
+        <value>
+            <fullName>Bank Statement 6 months</fullName>
+            <default>false</default>
+            <label>Bank Statement 6 months</label>
+        </value>
+        <value>
+            <fullName>Salary Slip</fullName>
+            <default>false</default>
+            <label>Salary Slip</label>
+        </value>
+        <value>
+            <fullName>Form 16</fullName>
+            <default>false</default>
+            <label>Form 16</label>
+        </value>
+        <value>
+            <fullName>ITR Acknowledgment</fullName>
+            <default>false</default>
+            <label>ITR Acknowledgment</label>
+        </value>
+        <value>
+            <fullName>GST Returns</fullName>
+            <default>false</default>
+            <label>GST Returns</label>
+        </value>
+        <value>
+            <fullName>Business Registration</fullName>
+            <default>false</default>
+            <label>Business Registration</label>
+        </value>
+        <value>
+            <fullName>Address Proof</fullName>
+            <default>false</default>
+            <label>Address Proof</label>
+        </value>
+        <value>
+            <fullName>Photograph</fullName>
+            <default>false</default>
+            <label>Photograph</label>
+        </value>
+        <value>
+            <fullName>Property Documents</fullName>
+            <default>false</default>
+            <label>Property Documents</label>
+        </value>
+        <value>
+            <fullName>Vehicle Documents</fullName>
+            <default>false</default>
+            <label>Vehicle Documents</label>
+        </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

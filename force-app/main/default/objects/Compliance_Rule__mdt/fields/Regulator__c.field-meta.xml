@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Regulator__c</fullName>
+    <label>Regulator</label>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+        <value>
+            <fullName>RBI</fullName>
+            <default>false</default>
+            <label>RBI</label>
+        </value>
+        <value>
+            <fullName>SEBI</fullName>
+            <default>false</default>
+            <label>SEBI</label>
+        </value>
+        <value>
+            <fullName>Internal</fullName>
+            <default>false</default>
+            <label>Internal</label>
+        </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

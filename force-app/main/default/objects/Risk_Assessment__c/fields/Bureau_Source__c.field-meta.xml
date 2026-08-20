@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Bureau_Source__c</fullName>
+    <label>Bureau Source</label>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+        <value>
+            <fullName>CIBIL</fullName>
+            <default>false</default>
+            <label>CIBIL</label>
+        </value>
+        <value>
+            <fullName>Experian</fullName>
+            <default>false</default>
+            <label>Experian</label>
+        </value>
+        <value>
+            <fullName>Equifax</fullName>
+            <default>false</default>
+            <label>Equifax</label>
+        </value>
+        <value>
+            <fullName>CRIF</fullName>
+            <default>false</default>
+            <label>CRIF</label>
+        </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

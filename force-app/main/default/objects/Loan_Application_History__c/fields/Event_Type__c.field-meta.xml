@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Event_Type__c</fullName>
+    <label>Event Type</label>
+    <type>Picklist</type>
+    <required>true</required>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+        <value>
+            <fullName>Application Created</fullName>
+            <default>false</default>
+            <label>Application Created</label>
+        </value>
+        <value>
+            <fullName>Application Submitted</fullName>
+            <default>false</default>
+            <label>Application Submitted</label>
+        </value>
+        <value>
+            <fullName>Document Uploaded</fullName>
+            <default>false</default>
+            <label>Document Uploaded</label>
+        </value>
+        <value>
+            <fullName>Document Verified</fullName>
+            <default>false</default>
+            <label>Document Verified</label>
+        </value>
+        <value>
+            <fullName>Document Issue Flagged</fullName>
+            <default>false</default>
+            <label>Document Issue Flagged</label>
+        </value>
+        <value>
+            <fullName>Agent Run Started</fullName>
+            <default>false</default>
+            <label>Agent Run Started</label>
+        </value>
+        <value>
+            <fullName>Agent Run Completed</fullName>
+            <default>false</default>
+            <label>Agent Run Completed</label>
+        </value>
+        <value>
+            <fullName>Agent Run Failed</fullName>
+            <default>false</default>
+            <label>Agent Run Failed</label>
+        </value>
+        <value>
+            <fullName>Risk Score Updated</fullName>
+            <default>false</default>
+            <label>Risk Score Updated</label>
+        </value>
+        <value>
+            <fullName>Compliance Check Run</fullName>
+            <default>false</default>
+            <label>Compliance Check Run</label>
+        </value>
+        <value>
+            <fullName>Compliance Violation Found</fullName>
+            <default>false</default>
+            <label>Compliance Violation Found</label>
+        </value>
+        <value>
+            <fullName>Compliance Violation Resolved</fullName>
+            <default>false</default>
+            <label>Compliance Violation Resolved</label>
+        </value>
+        <value>
+            <fullName>Loan Decision Generated</fullName>
+            <default>false</default>
+            <label>Loan Decision Generated</label>
+        </value>
+        <value>
+            <fullName>Officer Review Started</fullName>
+            <default>false</default>
+            <label>Officer Review Started</label>
+        </value>
+        <value>
+            <fullName>Officer Decision Made</fullName>
+            <default>false</default>
+            <label>Officer Decision Made</label>
+        </value>
+        <value>
+            <fullName>Application Status Changed</fullName>
+            <default>false</default>
+            <label>Application Status Changed</label>
+        </value>
+        <value>
+            <fullName>Application On Hold</fullName>
+            <default>false</default>
+            <label>Application On Hold</label>
+        </value>
+        <value>
+            <fullName>Application Approved</fullName>
+            <default>false</default>
+            <label>Application Approved</label>
+        </value>
+        <value>
+            <fullName>Application Rejected</fullName>
+            <default>false</default>
+            <label>Application Rejected</label>
+        </value>
+        <value>
+            <fullName>Approval Letter Generated</fullName>
+            <default>false</default>
+            <label>Approval Letter Generated</label>
+        </value>
+        <value>
+            <fullName>Disbursement Initiated</fullName>
+            <default>false</default>
+            <label>Disbursement Initiated</label>
+        </value>
+        <value>
+            <fullName>Disbursement Completed</fullName>
+            <default>false</default>
+            <label>Disbursement Completed</label>
+        </value>
+        <value>
+            <fullName>Disbursement Failed</fullName>
+            <default>false</default>
+            <label>Disbursement Failed</label>
+        </value>
+        <value>
+            <fullName>EMI Schedule Generated</fullName>
+            <default>false</default>
+            <label>EMI Schedule Generated</label>
+        </value>
+        <value>
+            <fullName>KYC Event</fullName>
+            <default>false</default>
+            <label>KYC Event</label>
+        </value>
+        <value>
+            <fullName>Customer Notification Sent</fullName>
+            <default>false</default>
+            <label>Customer Notification Sent</label>
+        </value>
+        <value>
+            <fullName>Application Withdrawn</fullName>
+            <default>false</default>
+            <label>Application Withdrawn</label>
+        </value>
+        <value>
+            <fullName>Application Reopened</fullName>
+            <default>false</default>
+            <label>Application Reopened</label>
+        </value>
+        <value>
+            <fullName>Field Modified</fullName>
+            <default>false</default>
+            <label>Field Modified</label>
+        </value>
+        <value>
+            <fullName>Reassigned</fullName>
+            <default>false</default>
+            <label>Reassigned</label>
+        </value>
+        <value>
+            <fullName>Escalated</fullName>
+            <default>false</default>
+            <label>Escalated</label>
+        </value>
+        <value>
+            <fullName>Integration Event</fullName>
+            <default>false</default>
+            <label>Integration Event</label>
+        </value>
+        <value>
+            <fullName>Exception Raised</fullName>
+            <default>false</default>
+            <label>Exception Raised</label>
+        </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Monthly_Income_Required</fullName>
+    <active>true</active>
+    <description>Monthly income cannot be blank or zero</description>
+    <errorConditionFormula>OR(ISBLANK(Monthly_Income__c), Monthly_Income__c &lt;= 0)</errorConditionFormula>
+    <errorDisplayField>Monthly_Income__c</errorDisplayField>
+    <errorMessage>Monthly income is required and must be greater than zero.</errorMessage>
+</ValidationRule>

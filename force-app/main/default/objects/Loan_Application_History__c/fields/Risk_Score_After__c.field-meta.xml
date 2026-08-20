@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Risk_Score_After__c</fullName>
+    <label>Risk Score After</label>
+    <precision>3</precision>
+    <scale>0</scale>
+    <type>Number</type>
+</CustomField>

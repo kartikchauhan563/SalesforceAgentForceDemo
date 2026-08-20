@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <!-- Master-Detail to Loan_Application__c for roll-up of agent scores and failed agent counts. -->
+    <deploymentStatus>Deployed</deploymentStatus>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableHistory>false</enableHistory>
+    <enableReports>true</enableReports>
+    <enableSearch>true</enableSearch>
+    <label>Agent Check Result</label>
+    <nameField>
+        <displayFormat>ACR-{00000}</displayFormat>
+        <label>Check Result Number</label>
+        <type>AutoNumber</type>
+    </nameField>
+    <pluralLabel>Agent Check Results</pluralLabel>
+    <sharingModel>ControlledByParent</sharingModel>
+</CustomObject>

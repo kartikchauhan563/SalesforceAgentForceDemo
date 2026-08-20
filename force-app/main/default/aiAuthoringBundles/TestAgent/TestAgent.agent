@@ -1,0 +1,194 @@
+system:
+    instructions: "You are an AI Agent."
+    messages:
+        welcome: |
+            Hi, I'm an AI service assistant. How can I help you?
+        error: "Sorry, it looks like something has gone wrong."
+
+config:
+    agent_label: "TestAgent"
+    agent_template: "SvcCopilotTmpl__AgentforceServiceAgent"
+    developer_name: "TestAgent"
+    description: "Deliver personalized customer interactions with an autonomous AI agent. Agentforce Service Agent intelligently supports your customers with common inquiries and escalates complex issues."
+
+access:
+    default_agent_user: "underwriting_assistant_agent@00dg500000axktv708387892.ext"
+    verified_customer_record_access:
+        use_default_objects: True
+
+variables:
+    authenticationKey: mutable string
+        description: "Stores the authentication key that's used to generate the verification code."
+        visibility: "Internal"
+    customerId: mutable string
+        description: "Stores the Salesforce user ID or contact ID."
+        visibility: "Internal"
+    customerType: mutable string
+        description: "Stores the customer ID type, whether it's a Salesforce user or a contact."
+        visibility: "Internal"
+    isVerified: mutable boolean = False
+        label: "isVerified"
+        description: "Stores a boolean value that indicates whether the customer code is verified."
+        visibility: "Internal"
+    EndUserId: linked string
+        source: @MessagingSession.MessagingEndUserId
+        description: "This variable may also be referred to as MessagingEndUser Id"
+    RoutableId: linked string
+        source: @MessagingSession.Id
+        description: "This variable may also be referred to as MessagingSession Id"
+    ContactId: linked string
+        source: @MessagingEndUser.ContactId
+        description: "This variable may also be referred to as MessagingEndUser ContactId"
+    EndUserLanguage: linked string
+        source: @MessagingSession.EndUserLanguage
+        description: "This variable may also be referred to as MessagingSession EndUserLanguage"
+    ChannelType: linked string
+        source: @MessagingSession.ChannelType
+        description: "This variable may also be referred to as MessagingSession ChannelType"
+    VerifiedCustomerId: mutable string
+        description: "This variable may also be referred to as VerifiedCustomerId"
+        visibility: "Internal"
+    emailCaseId: mutable string
+        description: "Stores the Salesforce Case ID created by an inbound email."
+        visibility: "External"
+    endUserEmail: mutable string
+        description: "Stores email address of the end user who sent the inbound email."
+        visibility: "External"
+    endUserContactId: mutable string
+        description: "Stores the Salesforce Contact ID associated with the end user who sent the inbound email."
+        visibility: "External"
+language:
+    additional_locales: "en_GB"
+    default_locale: "en_US"
+    all_additional_locales: False
+
+knowledge:
+    rag_feature_config_id: "ARFPC_1JDg5000006H3XVGA0"
+    citations_url: ""
+    citations_enabled: True
+
+start_agent agent_router:
+    label: "Agent Router"
+    description: "Welcome the user and determine the appropriate subagent based on user input"
+    model_config:
+        model: "model://sfdc_ai__DefaultEinsteinHyperClassifier"
+    reasoning:
+        instructions: ->
+            | Select the best tool to call based on conversation history and user's intent.
+        actions:
+            go_to_CaseAgent: @utils.transition to @subagent.CaseAgent
+            go_to_Sales_Cloud_Sub_Agent: @utils.transition to @subagent.Sales_Cloud_Sub_Agent
+
+subagent CaseAgent:
+    label: "CaseAgent"
+    description: |
+        This agent will take the case number and return the case status
+    reasoning:
+        instructions: ->
+            |
+                You help users check Salesforce Case status.
+                When the user asks for the status of a case:
+                1. Extract the case number exactly as provided by the user.
+                2. Preserve leading zeros in the case number.
+                3. Immediately call the action This_Action_is_for_case_management.
+                4. Pass the extracted case number into caseNumberText.
+                5. Do not respond with placeholder text such as "one moment please" or "checking".
+                6. Only respond to the user after the action returns a result.
+                7. If CaseStatus is returned, tell the user the case status.
+                8. If the action fails, apologize and explain that the status could not be retrieved.
+
+        actions:
+            This_Action_is_for_case_management: @actions.This_Action_is_for_case_management
+                with caseNumberText = ...
+
+    actions:
+        This_Action_is_for_case_management:
+            label: "This Action is for case management"
+            description: "Sends a case number and returns the case status."
+            target: "flow://CaseStatus_Flow"
+            inputs:
+                caseNumberText: string
+                    label: "caseNumberText"
+                    description: "The Salesforce Case Number, preserving leading zeros."
+                    is_required: True
+            outputs:
+                CaseStatus: string
+                    label: "CaseStatus"
+                    description: "The status of the case."
+                    is_displayable: True
+                    filter_from_agent: False
+
+subagent Sales_Cloud_Sub_Agent:
+    label: "Sales Cloud Sub Agent"
+    description: |
+        Answers sales, product, FAQ, and general informational questions
+        using information retrieved from the configured Data Library.
+    reasoning:
+        instructions: ->
+            |
+                For every user request, you MUST first call {!@actions.AnswerQuestionsWithKnowledge}.
+                Pass the user's complete request as query without changing its meaning.
+                Base your answer entirely on knowledgeSummary returned by the action.
+                Never answer from general knowledge or before the search action returns.
+                Preserve all citations and source links included in knowledgeSummary.
+                If citationSources contains additional source URLs, add them under a
+                "Sources:" heading, one URL per line. If the action returns no relevant
+                content, say that the configured data library has no relevant information
+                and ask the user to refine the question.
+
+        actions:
+            AnswerQuestionsWithKnowledge: @actions.AnswerQuestionsWithKnowledge
+                with query = ...
+                with citationsUrl = ...
+                with ragFeatureConfigId = ...
+                with citationsEnabled = ...
+
+    actions:
+        AnswerQuestionsWithKnowledge:
+            description: "Answers sales questions using only content retrieved from the configured Sales Cloud Assets data library."
+            label: "Answer Questions with Knowledge"
+            require_user_confirmation: False
+            include_in_progress_indicator: True
+            progress_indicator_message: "Searching the Sales Cloud data library"
+            source: "EmployeeCopilot__AnswerQuestionsWithKnowledge"
+            target: "standardInvocableAction://streamKnowledgeSearch"
+
+            inputs:
+                "query": string
+                    description: "Required. The user's question to search for in the Sales Cloud data library."
+                    label: "Query"
+                    is_required: True
+                    is_user_input: True
+                    complex_data_type_name: "lightning__textType"
+                "citationsUrl": string = @knowledge.citations_url
+                    description: "The URL to use for citations."
+                    label: "Citations URL"
+                    is_required: False
+                    is_user_input: True
+                    complex_data_type_name: "lightning__textType"
+                "ragFeatureConfigId": string = @knowledge.rag_feature_config_id
+                    description: "The RAG feature configuration for the Sales Cloud Assets data library."
+                    label: "RAG Feature Configuration ID"
+                    is_required: False
+                    is_user_input: True
+                    complex_data_type_name: "lightning__textType"
+                "citationsEnabled": boolean = @knowledge.citations_enabled
+                    description: "Whether citations are enabled."
+                    label: "Citations Enabled"
+                    is_required: False
+                    is_user_input: True
+                    complex_data_type_name: "lightning__booleanType"
+
+            outputs:
+                "knowledgeSummary": object
+                    description: "A rich-text summary grounded in retrieved data library content, including citations."
+                    label: "Knowledge Summary"
+                    complex_data_type_name: "lightning__richTextType"
+                    is_displayable: True
+                    filter_from_agent: False
+                "citationSources": object
+                    description: "Source links for the retrieved content."
+                    label: "Citation Sources"
+                    complex_data_type_name: "@apexClassType/AiCopilot__GenAiCitationInput"
+                    is_displayable: False
+                    filter_from_agent: False

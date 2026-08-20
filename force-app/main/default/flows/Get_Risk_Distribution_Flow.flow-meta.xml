@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <description>Risk level distribution. Portfolio and Audit Reporting sub-agent.</description>
+    <environments>Default</environments>
+    <interviewLabel>Get Risk Distribution {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Get Risk Distribution</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value><stringValue>LightningFlowBuilder</stringValue></value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value><stringValue>AUTO_LAYOUT_CANVAS</stringValue></value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value><stringValue>LightningFlowBuilder</stringValue></value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <actionCalls>
+        <name>Call_NBFC_Apex</name>
+        <label>Call NBFC Apex Service</label>
+        <locationX>176</locationX>
+        <locationY>158</locationY>
+        <actionName>NBFCFlowAction_GetRiskDistribution</actionName>
+        <actionType>apex</actionType>
+        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
+
+
+        <outputParameters>
+            <assignToReference>Total_Count</assignToReference>
+            <name>totalCount</name>
+        </outputParameters>
+        <outputParameters>
+            <assignToReference>Risk_Distribution_Text</assignToReference>
+            <name>riskDistributionText</name>
+        </outputParameters>
+        
+    </actionCalls>
+
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Call_NBFC_Apex</targetReference>
+        </connector>
+    </start>
+    <status>Active</status>
+
+    <variables>
+        <name>Total_Count</name>
+        <dataType>Number</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+        <scale>2</scale>
+    </variables>
+    <variables>
+        <name>Risk_Distribution_Text</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+</Flow>

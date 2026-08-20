@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Failed_Agents_Count__c</fullName>
+    <label>Failed Agents Count</label>
+    <summaryForeignKey>Agent_Check_Result__c.Loan_Application__c</summaryForeignKey>
+    <summaryOperation>count</summaryOperation>
+    <summaryFilterItems>
+        <field>Result__c</field>
+        <operation>equals</operation>
+        <value>Fail</value>
+    </summaryFilterItems>
+    <type>Summary</type>
+</CustomField>

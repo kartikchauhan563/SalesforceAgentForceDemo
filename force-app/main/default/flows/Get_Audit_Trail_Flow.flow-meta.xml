@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <description>Chronological audit trail. Portfolio and Audit Reporting sub-agent.</description>
+    <environments>Default</environments>
+    <interviewLabel>Get Audit Trail {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Get Audit Trail</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value><stringValue>LightningFlowBuilder</stringValue></value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value><stringValue>AUTO_LAYOUT_CANVAS</stringValue></value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value><stringValue>LightningFlowBuilder</stringValue></value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <actionCalls>
+        <name>Call_NBFC_Apex</name>
+        <label>Call NBFC Apex Service</label>
+        <locationX>176</locationX>
+        <locationY>158</locationY>
+        <actionName>NBFCFlowAction_GetAuditTrail</actionName>
+        <actionType>apex</actionType>
+        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
+        <inputParameters>
+            <name>loanApplicationId</name>
+            <value>
+                <elementReference>Loan_Application_Id</elementReference>
+            </value>
+        </inputParameters>        <inputParameters>
+            <name>complianceRelevantOnly</name>
+            <value>
+                <elementReference>Compliance_Relevant_Only</elementReference>
+            </value>
+        </inputParameters>        <inputParameters>
+            <name>limitRecords</name>
+            <value>
+                <elementReference>Limit_Records</elementReference>
+            </value>
+        </inputParameters>
+
+        <outputParameters>
+            <assignToReference>Record_Found</assignToReference>
+            <name>recordFound</name>
+        </outputParameters>
+        <outputParameters>
+            <assignToReference>Total_Events</assignToReference>
+            <name>totalEvents</name>
+        </outputParameters>
+        <outputParameters>
+            <assignToReference>Audit_Trail_Text</assignToReference>
+            <name>auditTrailText</name>
+        </outputParameters>
+        <outputParameters>
+            <assignToReference>Has_Critical_Events</assignToReference>
+            <name>hasCriticalEvents</name>
+        </outputParameters>
+        
+    </actionCalls>
+
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Call_NBFC_Apex</targetReference>
+        </connector>
+    </start>
+    <status>Active</status>
+
+    <variables>
+        <name>Loan_Application_Id</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>Compliance_Relevant_Only</name>
+        <dataType>Boolean</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>Limit_Records</name>
+        <dataType>Number</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <scale>2</scale>
+    </variables>
+    <variables>
+        <name>Audit_Trail_Text</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+    <variables>
+        <name>Total_Events</name>
+        <dataType>Number</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+        <scale>2</scale>
+    </variables>
+    <variables>
+        <name>Has_Critical_Events</name>
+        <dataType>Boolean</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+    <variables>
+        <name>Record_Found</name>
+        <dataType>Boolean</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+</Flow>

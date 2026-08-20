@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <description>Min credit score from Policy_Rule__mdt. Credit Risk Agent.</description>
+    <environments>Default</environments>
+    <interviewLabel>Get Credit Score Policy {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Get Credit Score Policy</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value><stringValue>LightningFlowBuilder</stringValue></value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value><stringValue>AUTO_LAYOUT_CANVAS</stringValue></value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value><stringValue>LightningFlowBuilder</stringValue></value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <actionCalls>
+        <name>Call_NBFC_Apex</name>
+        <label>Call NBFC Apex Service</label>
+        <locationX>176</locationX>
+        <locationY>158</locationY>
+        <actionName>NBFCFlowAction_GetCreditScorePolicy</actionName>
+        <actionType>apex</actionType>
+        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
+        <inputParameters>
+            <name>productCode</name>
+            <value>
+                <elementReference>Product_Code</elementReference>
+            </value>
+        </inputParameters>
+
+        <outputParameters>
+            <assignToReference>Rule_Name</assignToReference>
+            <name>ruleName</name>
+        </outputParameters>
+        <outputParameters>
+            <assignToReference>Min_Credit_Score</assignToReference>
+            <name>minCreditScore</name>
+        </outputParameters>
+        <outputParameters>
+            <assignToReference>Record_Found</assignToReference>
+            <name>recordFound</name>
+        </outputParameters>
+        <outputParameters>
+            <assignToReference>Error_Message</assignToReference>
+            <name>errorMessage</name>
+        </outputParameters>
+        <outputParameters>
+            <assignToReference>Severity</assignToReference>
+            <name>severity</name>
+        </outputParameters>
+        
+    </actionCalls>
+
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Call_NBFC_Apex</targetReference>
+        </connector>
+    </start>
+    <status>Active</status>
+
+    <variables>
+        <name>Product_Code</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>Min_Credit_Score</name>
+        <dataType>Number</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+        <scale>2</scale>
+    </variables>
+    <variables>
+        <name>Rule_Name</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+    <variables>
+        <name>Severity</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+    <variables>
+        <name>Record_Found</name>
+        <dataType>Boolean</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+    <variables>
+        <name>Error_Message</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+</Flow>

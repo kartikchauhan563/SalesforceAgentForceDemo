@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <!-- Lookup (not Master-Detail) to Loan_Application__c: RBI mandates 7-year retention of lending event history independent of parent record lifecycle. -->
+    <deploymentStatus>Deployed</deploymentStatus>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableHistory>false</enableHistory>
+    <enableReports>true</enableReports>
+    <enableSearch>true</enableSearch>
+    <label>Loan Application History</label>
+    <nameField>
+        <displayFormat>LAH-{0000000}</displayFormat>
+        <label>History Number</label>
+        <type>AutoNumber</type>
+    </nameField>
+    <pluralLabel>Loan Application Histories</pluralLabel>
+    <sharingModel>ReadWrite</sharingModel>
+</CustomObject>

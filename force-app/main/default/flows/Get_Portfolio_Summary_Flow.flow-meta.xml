@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <description>Portfolio aggregates. Portfolio and Audit Reporting sub-agent.</description>
+    <environments>Default</environments>
+    <interviewLabel>Get Portfolio Summary {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Get Portfolio Summary</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value><stringValue>LightningFlowBuilder</stringValue></value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value><stringValue>AUTO_LAYOUT_CANVAS</stringValue></value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value><stringValue>LightningFlowBuilder</stringValue></value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <actionCalls>
+        <name>Call_NBFC_Apex</name>
+        <label>Call NBFC Apex Service</label>
+        <locationX>176</locationX>
+        <locationY>158</locationY>
+        <actionName>NBFCFlowAction_GetPortfolioSummary</actionName>
+        <actionType>apex</actionType>
+        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
+        <inputParameters>
+            <name>dateFrom</name>
+            <value>
+                <elementReference>Date_From</elementReference>
+            </value>
+        </inputParameters>        <inputParameters>
+            <name>dateTo</name>
+            <value>
+                <elementReference>Date_To</elementReference>
+            </value>
+        </inputParameters>
+
+        <outputParameters>
+            <assignToReference>Portfolio_Summary_Text</assignToReference>
+            <name>portfolioSummaryText</name>
+        </outputParameters>
+        <outputParameters>
+            <assignToReference>Total_Applications</assignToReference>
+            <name>totalApplications</name>
+        </outputParameters>
+        
+    </actionCalls>
+
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Call_NBFC_Apex</targetReference>
+        </connector>
+    </start>
+    <status>Active</status>
+
+    <variables>
+        <name>Date_From</name>
+        <dataType>Date</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>Date_To</name>
+        <dataType>Date</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>Total_Applications</name>
+        <dataType>Number</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+        <scale>2</scale>
+    </variables>
+    <variables>
+        <name>Portfolio_Summary_Text</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+</Flow>
