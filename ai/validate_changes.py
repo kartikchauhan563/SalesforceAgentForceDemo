@@ -8,6 +8,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from discover_components import is_allowed_path, is_blocked_path
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -38,28 +40,6 @@ def git_diff_stat(base: str) -> int:
 
 def load_policy() -> dict:
     return json.loads((ROOT / "ai" / "workspace-policy.json").read_text(encoding="utf-8"))
-
-
-def is_blocked(path: str, policy: dict) -> bool:
-    lowered = path.lower()
-    if ".." in path:
-        return True
-    for prefix in policy.get("blocked_prefixes", []):
-        if lowered.startswith(prefix.lower()):
-            return True
-    name = Path(path).name.lower()
-    for blocked in policy.get("blocked_names", []):
-        if name == blocked.lower() or lowered.endswith(blocked.lower()):
-            return True
-    return False
-
-
-def is_allowed(path: str, policy: dict) -> bool:
-    lowered = path.lower()
-    return any(
-        lowered.startswith(prefix.lower())
-        for prefix in policy.get("allowed_prefixes", [])
-    )
 
 
 def restore(paths: list[str]) -> None:
@@ -95,7 +75,7 @@ def main() -> int:
     blocked = [
         path
         for path in changed
-        if is_blocked(path, policy) or not is_allowed(path, policy)
+        if is_blocked_path(path, policy) or not is_allowed_path(path, policy)
     ]
     if blocked:
         restore(blocked)

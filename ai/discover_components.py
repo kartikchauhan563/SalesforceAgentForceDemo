@@ -20,6 +20,10 @@ SOURCE_SUFFIXES = {
     ".cmp",
     ".app",
     ".page",
+    # Agentforce metadata: the agent definition, planner bundle, and action schemas.
+    ".agent",
+    ".genAiPlannerBundle",
+    ".json",
 }
 STOP_WORDS = {
     "add",
@@ -59,6 +63,33 @@ def load_policy(root: Path = ROOT) -> dict:
     return json.loads((root / "ai" / "workspace-policy.json").read_text(encoding="utf-8"))
 
 
+def is_blocked_path(path: str, policy: dict) -> bool:
+    normalized = path.replace("\\", "/")
+    if ".." in normalized:
+        return True
+    lowered = normalized.lower()
+    for prefix in policy.get("blocked_prefixes", []):
+        if lowered.startswith(prefix.lower().replace("\\", "/")):
+            return True
+    segments = {segment.lower() for segment in lowered.split("/")[:-1]}
+    for directory in policy.get("blocked_dir_names", []):
+        if directory.lower() in segments:
+            return True
+    name = Path(normalized).name.lower()
+    for blocked in policy.get("blocked_names", []):
+        if name == blocked.lower() or name.endswith(blocked.lower()):
+            return True
+    return False
+
+
+def is_allowed_path(path: str, policy: dict) -> bool:
+    lowered = path.replace("\\", "/").lower()
+    return any(
+        lowered.startswith(prefix.lower().replace("\\", "/"))
+        for prefix in policy.get("allowed_prefixes", [])
+    )
+
+
 def normalize_tokens(value: str) -> set[str]:
     tokens: set[str] = set()
     for raw in TOKEN_RE.findall(value or ""):
@@ -82,15 +113,20 @@ def is_source_file(path: Path) -> bool:
     )
 
 
-def inventory(root: Path, allowed_prefixes: list[str]) -> list[Path]:
+def inventory(root: Path, policy: dict) -> list[Path]:
     found: set[Path] = set()
-    for prefix in allowed_prefixes:
+    for prefix in policy.get("allowed_prefixes", []):
         base = root / prefix
         if not base.exists():
             continue
         for path in base.rglob("*"):
-            if path.is_file() and is_source_file(path) and path.stat().st_size <= 400_000:
-                found.add(path)
+            if not path.is_file() or not is_source_file(path):
+                continue
+            if path.stat().st_size > 400_000:
+                continue
+            if is_blocked_path(path.relative_to(root).as_posix(), policy):
+                continue
+            found.add(path)
     return sorted(found)
 
 
@@ -173,7 +209,7 @@ def discover(
     if not tokens:
         return []
     policy = load_policy(root)
-    files = inventory(root, policy.get("allowed_prefixes", []))
+    files = inventory(root, policy)
     ranked = [score_file(root, path, tokens) for path in files]
     ranked = [item for item in ranked if item.score >= minimum_score]
     ranked.sort(key=lambda item: (-item.score, item.path))

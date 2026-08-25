@@ -64,6 +64,21 @@ jobs:
           ref: ${{ inputs.sourceBranch }}
           fetch-depth: 0
 
+      # The source branch can be an orphan branch imported from an external
+      # repository, so it carries no pipeline tooling. Take ai/ and scripts/
+      # from the branch the workflow itself was dispatched on.
+      - name: Check out pipeline tooling
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          path: .ci-tools
+          fetch-depth: 1
+
+      - name: Keep tooling out of the working tree
+        run: |
+          set -euo pipefail
+          echo ".ci-tools/" >> .git/info/exclude
+
       - id: base
         name: Capture base commit
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -84,7 +99,7 @@ jobs:
           SF_CONTROL_JWT_KEY: ${{ secrets.SF_CONTROL_JWT_KEY }}
         run: |
           npm install -g @salesforce/cli
-          python scripts/sf_control_login.py > control-auth.json
+          python .ci-tools/scripts/sf_control_login.py > control-auth.json
           echo "SF_CONTROL_ACCESS_TOKEN=$(python -c 'import json;print(json.load(open("control-auth.json"))["accessToken"])')" >> "$GITHUB_ENV"
           echo "SF_CONTROL_INSTANCE_URL=$(python -c 'import json;print(json.load(open("control-auth.json"))["instanceUrl"])')" >> "$GITHUB_ENV"
           rm -f control-auth.json
@@ -97,7 +112,7 @@ jobs:
           DISPATCH_TARGET: ${{ inputs.targetEnvironment }}
           EXPECTED_REPOSITORY: ${{ github.repository }}
         run: |
-          python scripts/load_request.py --request-id "$DISPATCH_REQUEST_ID" --out request.json
+          python .ci-tools/scripts/load_request.py --request-id "$DISPATCH_REQUEST_ID" --out request.json
           python - <<'PY'
           import json, os
           request = json.load(open("request.json", encoding="utf-8"))
@@ -118,7 +133,7 @@ jobs:
           SF_CONTROL_ACCESS_TOKEN: ${{ env.SF_CONTROL_ACCESS_TOKEN }}
           SF_CONTROL_INSTANCE_URL: ${{ env.SF_CONTROL_INSTANCE_URL }}
         run: |
-          python scripts/salesforce_callback.py \
+          python .ci-tools/scripts/salesforce_callback.py \
             --requestId "${{ inputs.requestId }}" \
             --referenceId "${{ inputs.referenceId }}" \
             --workflowRunId "${GITHUB_RUN_ID}" \
@@ -127,14 +142,14 @@ jobs:
 
       - name: Build prompt
         run: |
-          python ai/build_prompt.py \
+          python .ci-tools/ai/build_prompt.py \
             --component-path "$(python -c 'import json;print(json.load(open("request.json"))["componentPath"] or "AUTO")')" \
             --requirement "$(python -c 'import json;print(json.load(open("request.json"))["requirement"])')" \
             --out prompt.md
 
       - name: Callback AI refactoring
         run: |
-          python scripts/salesforce_callback.py \
+          python .ci-tools/scripts/salesforce_callback.py \
             --requestId "${{ inputs.requestId }}" \
             --referenceId "${{ inputs.referenceId }}" \
             --workflowRunId "${GITHUB_RUN_ID}" \
@@ -146,11 +161,11 @@ jobs:
           AI_API_BASE_URL: ${{ vars.AI_API_BASE_URL }}
           AI_MODEL: ${{ vars.AI_MODEL }}
         run: |
-          if ! python ai/run_refactor.py \
+          if ! python .ci-tools/ai/run_refactor.py \
               --component-path "$(python -c 'import json;print(json.load(open("request.json"))["componentPath"] or "AUTO")')" \
               --requirement "$(python -c 'import json;print(json.load(open("request.json"))["requirement"])')" \
               --summary-out ai-summary.json; then
-            python scripts/salesforce_callback.py \
+            python .ci-tools/scripts/salesforce_callback.py \
               --requestId "${{ inputs.requestId }}" \
               --referenceId "${{ inputs.referenceId }}" \
               --workflowRunId "${GITHUB_RUN_ID}" \
@@ -161,8 +176,8 @@ jobs:
 
       - name: Workspace safety
         run: |
-          if ! python ai/validate_changes.py --base "${{ steps.base.outputs.sha }}"; then
-            python scripts/salesforce_callback.py \
+          if ! python .ci-tools/ai/validate_changes.py --base "${{ steps.base.outputs.sha }}"; then
+            python .ci-tools/scripts/salesforce_callback.py \
               --requestId "${{ inputs.requestId }}" \
               --referenceId "${{ inputs.referenceId }}" \
               --workflowRunId "${GITHUB_RUN_ID}" \
@@ -173,7 +188,7 @@ jobs:
 
       - name: Static analysis
         run: |
-          python scripts/salesforce_callback.py \
+          python .ci-tools/scripts/salesforce_callback.py \
             --requestId "${{ inputs.requestId }}" \
             --referenceId "${{ inputs.referenceId }}" \
             --workflowRunId "${GITHUB_RUN_ID}" \
@@ -194,8 +209,8 @@ jobs:
             "${ANALYZER_TARGETS[@]}" \
             --rule-selector Recommended \
             --output-file static-analysis-result.json || true
-          if ! python scripts/parse_static_analysis.py --input static-analysis-result.json --out static-analysis-summary.json; then
-            python scripts/salesforce_callback.py \
+          if ! python .ci-tools/scripts/parse_static_analysis.py --input static-analysis-result.json --out static-analysis-summary.json; then
+            python .ci-tools/scripts/salesforce_callback.py \
               --requestId "${{ inputs.requestId }}" \
               --referenceId "${{ inputs.referenceId }}" \
               --workflowRunId "${GITHUB_RUN_ID}" \
@@ -204,7 +219,7 @@ jobs:
               --pmdResult "$(cat static-analysis-summary.json)"
             exit 1
           fi
-          python scripts/salesforce_callback.py \
+          python .ci-tools/scripts/salesforce_callback.py \
             --requestId "${{ inputs.requestId }}" \
             --referenceId "${{ inputs.referenceId }}" \
             --workflowRunId "${GITHUB_RUN_ID}" \
@@ -213,7 +228,7 @@ jobs:
 
       - name: Summarize
         run: |
-          python ai/summarize_changes.py --base "${{ steps.base.outputs.sha }}" --out ai-summary.json
+          python .ci-tools/ai/summarize_changes.py --base "${{ steps.base.outputs.sha }}" --out ai-summary.json
 
       - uses: actions/upload-artifact@v4
         with:
@@ -237,6 +252,18 @@ jobs:
         with:
           ref: ${{ inputs.sourceBranch }}
           fetch-depth: 0
+
+      - name: Check out pipeline tooling
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          path: .ci-tools
+          fetch-depth: 1
+
+      - name: Keep tooling out of the working tree
+        run: |
+          set -euo pipefail
+          echo ".ci-tools/" >> .git/info/exclude
 
       - uses: actions/download-artifact@v4
         with:
@@ -282,17 +309,17 @@ jobs:
           SF_CONTROL_INSTANCE_URL: ${{ secrets.SF_CONTROL_INSTANCE_URL }}
           SF_CONTROL_JWT_KEY: ${{ secrets.SF_CONTROL_JWT_KEY }}
         run: |
-          python scripts/sf_control_login.py > control-auth.json
+          python .ci-tools/scripts/sf_control_login.py > control-auth.json
           export SF_CONTROL_ACCESS_TOKEN=$(python -c 'import json;print(json.load(open("control-auth.json"))["accessToken"])')
           export SF_CONTROL_INSTANCE_URL=$(python -c 'import json;print(json.load(open("control-auth.json"))["instanceUrl"])')
           rm -f control-auth.json
-          python scripts/salesforce_callback.py \
+          python .ci-tools/scripts/salesforce_callback.py \
             --requestId "${{ inputs.requestId }}" \
             --referenceId "${{ inputs.referenceId }}" \
             --workflowRunId "${GITHUB_RUN_ID}" \
             --status "Salesforce Validation"
-          python scripts/generate_delta.py --base "${{ needs.refactor.outputs.base_sha }}" --head HEAD --out delta
-          python scripts/select_apex_tests.py \
+          python .ci-tools/scripts/generate_delta.py --base "${{ needs.refactor.outputs.base_sha }}" --head HEAD --out delta
+          python .ci-tools/scripts/select_apex_tests.py \
             --base "${{ needs.refactor.outputs.base_sha }}" \
             --out selected-tests.json
           TEST_LEVEL=NoTestRun
@@ -316,10 +343,10 @@ jobs:
             --test-level "$TEST_LEVEL" \
             "${TEST_ARGS[@]}" \
             --json > validation-result.json || true
-          python scripts/parse_validation.py --input validation-result.json --out validation-summary.json
+          python .ci-tools/scripts/parse_validation.py --input validation-result.json --out validation-summary.json
           STATUS=$?
           if [ $STATUS -ne 0 ]; then
-            python scripts/salesforce_callback.py \
+            python .ci-tools/scripts/salesforce_callback.py \
               --requestId "${{ inputs.requestId }}" \
               --referenceId "${{ inputs.referenceId }}" \
               --workflowRunId "${GITHUB_RUN_ID}" \
@@ -345,6 +372,18 @@ jobs:
           ref: ${{ inputs.sourceBranch }}
           fetch-depth: 0
 
+      - name: Check out pipeline tooling
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          path: .ci-tools
+          fetch-depth: 1
+
+      - name: Keep tooling out of the working tree
+        run: |
+          set -euo pipefail
+          echo ".ci-tools/" >> .git/info/exclude
+
       - uses: actions/download-artifact@v4
         with:
           name: refactor-workspace
@@ -365,7 +404,7 @@ jobs:
         run: |
           set -euo pipefail
           npm install -g @salesforce/cli
-          python scripts/sf_control_login.py > control-auth.json
+          python .ci-tools/scripts/sf_control_login.py > control-auth.json
           export SF_CONTROL_ACCESS_TOKEN=$(python -c 'import json;print(json.load(open("control-auth.json"))["accessToken"])')
           export SF_CONTROL_INSTANCE_URL=$(python -c 'import json;print(json.load(open("control-auth.json"))["instanceUrl"])')
           rm -f control-auth.json
@@ -375,7 +414,7 @@ jobs:
           git checkout -B "$BRANCH"
           git add -- force-app
           if git diff --cached --quiet; then
-            python scripts/salesforce_callback.py \
+            python .ci-tools/scripts/salesforce_callback.py \
               --requestId "${{ inputs.requestId }}" \
               --referenceId "${{ inputs.referenceId }}" \
               --workflowRunId "${GITHUB_RUN_ID}" \
@@ -417,7 +456,7 @@ jobs:
               --body-file pr-body.md
           fi
           PR_JSON=$(gh pr view "$BRANCH" --json number,url,headRefOid)
-          python scripts/salesforce_callback.py --payload-json "$(python - <<PY
+          python .ci-tools/scripts/salesforce_callback.py --payload-json "$(python - <<PY
           import json, os
           pr = json.loads('''$PR_JSON''')
           print(json.dumps({
@@ -437,7 +476,7 @@ jobs:
           }))
           PY
           )"
-          python scripts/salesforce_callback.py \
+          python .ci-tools/scripts/salesforce_callback.py \
             --requestId "${{ inputs.requestId }}" \
             --referenceId "${{ inputs.referenceId }}" \
             --workflowRunId "${GITHUB_RUN_ID}" \

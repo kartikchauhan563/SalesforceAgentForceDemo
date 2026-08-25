@@ -1,21 +1,20 @@
 {
   "allowed_prefixes": [
-    "force-app/main/default/classes/",
-    "force-app/main/default/triggers/",
-    "force-app/main/default/lwc/",
-    "force-app/main/default/aura/",
-    "force-app/main/default/objects/",
-    "force-app/main/default/flows/",
-    "force-app/main/default/pages/",
-    "force-app/main/default/components/"
+    "force-app/main/default/"
   ],
   "blocked_prefixes": [
     ".github/",
     "credentials/",
     "secrets/",
     "config/auth/",
-    "connectedApps/",
-    "ai/prompts/"
+    "ai/prompts/",
+    "force-app/main/default/connectedApps/",
+    "force-app/main/default/externalCredentials/",
+    "force-app/main/default/namedCredentials/",
+    "force-app/main/default/certs/"
+  ],
+  "blocked_dir_names": [
+    "agentGraph"
   ],
   "blocked_names": [
     "CODEOWNERS",
