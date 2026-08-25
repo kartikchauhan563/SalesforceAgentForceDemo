@@ -1,0 +1,444 @@
+name: AI Refactor
+
+on:
+  workflow_dispatch:
+    inputs:
+      requestId:
+        required: true
+        type: string
+      referenceId:
+        required: true
+        type: string
+      repository:
+        required: true
+        type: string
+      sourceBranch:
+        required: true
+        type: string
+      componentPath:
+        required: false
+        default: AUTO
+        type: string
+      requirement:
+        required: true
+        type: string
+      targetEnvironment:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: ai-refactor-${{ inputs.referenceId }}
+  cancel-in-progress: false
+
+jobs:
+  refactor:
+    name: AI refactor
+    runs-on: ubuntu-latest
+    outputs:
+      base_sha: ${{ steps.base.outputs.sha }}
+    steps:
+      - name: Validate inputs
+        env:
+          REQUEST_ID: ${{ inputs.requestId }}
+          REFERENCE_ID: ${{ inputs.referenceId }}
+          SOURCE_BRANCH: ${{ inputs.sourceBranch }}
+          TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
+        run: |
+          set -euo pipefail
+          test -n "$REQUEST_ID"
+          test -n "$REFERENCE_ID"
+          test -n "$SOURCE_BRANCH"
+          case "$TARGET_ENVIRONMENT" in
+            DEV|QA|UAT|PROD) ;;
+            *) echo "Unsupported target"; exit 1 ;;
+          esac
+          echo "reference=$REFERENCE_ID run=${GITHUB_RUN_ID} stage=validate-input"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sourceBranch }}
+          fetch-depth: 0
+
+      - id: base
+        name: Capture base commit
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Control-plane login
+        env:
+          SF_CONTROL_CLIENT_ID: ${{ secrets.SF_CONTROL_CLIENT_ID }}
+          SF_CONTROL_USERNAME: ${{ secrets.SF_CONTROL_USERNAME }}
+          SF_CONTROL_INSTANCE_URL: ${{ secrets.SF_CONTROL_INSTANCE_URL }}
+          SF_CONTROL_JWT_KEY: ${{ secrets.SF_CONTROL_JWT_KEY }}
+        run: |
+          npm install -g @salesforce/cli
+          python scripts/sf_control_login.py > control-auth.json
+          echo "SF_CONTROL_ACCESS_TOKEN=$(python -c 'import json;print(json.load(open("control-auth.json"))["accessToken"])')" >> "$GITHUB_ENV"
+          echo "SF_CONTROL_INSTANCE_URL=$(python -c 'import json;print(json.load(open("control-auth.json"))["instanceUrl"])')" >> "$GITHUB_ENV"
+          rm -f control-auth.json
+
+      - name: Load canonical request from Salesforce
+        env:
+          DISPATCH_REQUEST_ID: ${{ inputs.requestId }}
+          DISPATCH_REFERENCE_ID: ${{ inputs.referenceId }}
+          DISPATCH_SOURCE_BRANCH: ${{ inputs.sourceBranch }}
+          DISPATCH_TARGET: ${{ inputs.targetEnvironment }}
+          EXPECTED_REPOSITORY: ${{ github.repository }}
+        run: |
+          python scripts/load_request.py --request-id "$DISPATCH_REQUEST_ID" --out request.json
+          python - <<'PY'
+          import json, os
+          request = json.load(open("request.json", encoding="utf-8"))
+          expected = {
+              "requestId": os.environ["DISPATCH_REQUEST_ID"],
+              "referenceId": os.environ["DISPATCH_REFERENCE_ID"],
+              "repository": os.environ["EXPECTED_REPOSITORY"],
+              "sourceBranch": os.environ["DISPATCH_SOURCE_BRANCH"],
+              "targetEnvironment": os.environ["DISPATCH_TARGET"],
+          }
+          mismatches = [key for key, value in expected.items() if str(request.get(key) or "") != value]
+          if mismatches:
+              raise SystemExit("Dispatch does not match canonical Salesforce request: " + ", ".join(mismatches))
+          PY
+
+      - name: Callback preparing workspace
+        env:
+          SF_CONTROL_ACCESS_TOKEN: ${{ env.SF_CONTROL_ACCESS_TOKEN }}
+          SF_CONTROL_INSTANCE_URL: ${{ env.SF_CONTROL_INSTANCE_URL }}
+        run: |
+          python scripts/salesforce_callback.py \
+            --requestId "${{ inputs.requestId }}" \
+            --referenceId "${{ inputs.referenceId }}" \
+            --workflowRunId "${GITHUB_RUN_ID}" \
+            --status "Preparing Workspace" \
+            --baseCommit "${{ steps.base.outputs.sha }}"
+
+      - name: Build prompt
+        run: |
+          python ai/build_prompt.py \
+            --component-path "$(python -c 'import json;print(json.load(open("request.json"))["componentPath"] or "AUTO")')" \
+            --requirement "$(python -c 'import json;print(json.load(open("request.json"))["requirement"])')" \
+            --out prompt.md
+
+      - name: Callback AI refactoring
+        run: |
+          python scripts/salesforce_callback.py \
+            --requestId "${{ inputs.requestId }}" \
+            --referenceId "${{ inputs.referenceId }}" \
+            --workflowRunId "${GITHUB_RUN_ID}" \
+            --status "AI Refactoring"
+
+      - name: Run AI coding agent
+        env:
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_API_BASE_URL: ${{ vars.AI_API_BASE_URL }}
+          AI_MODEL: ${{ vars.AI_MODEL }}
+        run: |
+          if ! python ai/run_refactor.py \
+              --component-path "$(python -c 'import json;print(json.load(open("request.json"))["componentPath"] or "AUTO")')" \
+              --requirement "$(python -c 'import json;print(json.load(open("request.json"))["requirement"])')" \
+              --summary-out ai-summary.json; then
+            python scripts/salesforce_callback.py \
+              --requestId "${{ inputs.requestId }}" \
+              --referenceId "${{ inputs.referenceId }}" \
+              --workflowRunId "${GITHUB_RUN_ID}" \
+              --status "Refactor Failed" \
+              --errorSummary "The AI coding step failed or produced no approved source changes."
+            exit 1
+          fi
+
+      - name: Workspace safety
+        run: |
+          if ! python ai/validate_changes.py --base "${{ steps.base.outputs.sha }}"; then
+            python scripts/salesforce_callback.py \
+              --requestId "${{ inputs.requestId }}" \
+              --referenceId "${{ inputs.referenceId }}" \
+              --workflowRunId "${GITHUB_RUN_ID}" \
+              --status "Workspace Validation Failed" \
+              --errorSummary "AI changed a blocked path or exceeded change limits."
+            exit 1
+          fi
+
+      - name: Static analysis
+        run: |
+          python scripts/salesforce_callback.py \
+            --requestId "${{ inputs.requestId }}" \
+            --referenceId "${{ inputs.referenceId }}" \
+            --workflowRunId "${GITHUB_RUN_ID}" \
+            --status "Static Analysis"
+          sf plugins install code-analyzer || true
+          ANALYZER_TARGETS=()
+          while IFS= read -r changed_file; do
+            if [ -n "$changed_file" ]; then
+              ANALYZER_TARGETS+=(--target "$changed_file")
+            fi
+          done < <(git diff --name-only "${{ steps.base.outputs.sha }}" -- force-app)
+          if [ "${#ANALYZER_TARGETS[@]}" -eq 0 ]; then
+            echo "No changed Salesforce source files were available for static analysis."
+            exit 1
+          fi
+          sf code-analyzer run \
+            --workspace force-app \
+            "${ANALYZER_TARGETS[@]}" \
+            --rule-selector Recommended \
+            --output-file static-analysis-result.json || true
+          if ! python scripts/parse_static_analysis.py --input static-analysis-result.json --out static-analysis-summary.json; then
+            python scripts/salesforce_callback.py \
+              --requestId "${{ inputs.requestId }}" \
+              --referenceId "${{ inputs.referenceId }}" \
+              --workflowRunId "${GITHUB_RUN_ID}" \
+              --status "Static Analysis Failed" \
+              --pmdStatus "Failed" \
+              --pmdResult "$(cat static-analysis-summary.json)"
+            exit 1
+          fi
+          python scripts/salesforce_callback.py \
+            --requestId "${{ inputs.requestId }}" \
+            --referenceId "${{ inputs.referenceId }}" \
+            --workflowRunId "${GITHUB_RUN_ID}" \
+            --pmdStatus "Succeeded" \
+            --pmdResult "$(cat static-analysis-summary.json)"
+
+      - name: Summarize
+        run: |
+          python ai/summarize_changes.py --base "${{ steps.base.outputs.sha }}" --out ai-summary.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: refactor-workspace
+          path: |
+            force-app
+            ai-summary.json
+            request.json
+          include-hidden-files: false
+
+  validate:
+    name: Salesforce validation
+    needs: refactor
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.targetEnvironment }}
+    outputs:
+      validation_id: ${{ steps.parse.outputs.id }}
+      test_summary: ${{ steps.parse.outputs.tests }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sourceBranch }}
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: refactor-workspace
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Salesforce CLI and target login
+        env:
+          SF_CLIENT_ID: ${{ secrets.SF_CLIENT_ID }}
+          SF_USERNAME: ${{ secrets.SF_USERNAME }}
+          SF_INSTANCE_URL: ${{ secrets.SF_INSTANCE_URL }}
+          SF_JWT_KEY: ${{ secrets.SF_JWT_KEY }}
+        run: |
+          npm install -g @salesforce/cli
+          python - <<'PY'
+          import os, tempfile, subprocess
+          from pathlib import Path
+          key = os.environ["SF_JWT_KEY"].replace("\\n", "\n")
+          path = Path(tempfile.mkstemp(suffix=".key")[1])
+          path.write_text(key)
+          subprocess.run([
+            "sf","org","login","jwt",
+            "--client-id", os.environ["SF_CLIENT_ID"],
+            "--jwt-key-file", str(path),
+            "--username", os.environ["SF_USERNAME"],
+            "--instance-url", os.environ["SF_INSTANCE_URL"],
+            "--alias", "target-org"
+          ], check=True)
+          path.unlink(missing_ok=True)
+          PY
+
+      - name: Generate delta and validate
+        env:
+          SF_CONTROL_CLIENT_ID: ${{ secrets.SF_CONTROL_CLIENT_ID }}
+          SF_CONTROL_USERNAME: ${{ secrets.SF_CONTROL_USERNAME }}
+          SF_CONTROL_INSTANCE_URL: ${{ secrets.SF_CONTROL_INSTANCE_URL }}
+          SF_CONTROL_JWT_KEY: ${{ secrets.SF_CONTROL_JWT_KEY }}
+        run: |
+          python scripts/sf_control_login.py > control-auth.json
+          export SF_CONTROL_ACCESS_TOKEN=$(python -c 'import json;print(json.load(open("control-auth.json"))["accessToken"])')
+          export SF_CONTROL_INSTANCE_URL=$(python -c 'import json;print(json.load(open("control-auth.json"))["instanceUrl"])')
+          rm -f control-auth.json
+          python scripts/salesforce_callback.py \
+            --requestId "${{ inputs.requestId }}" \
+            --referenceId "${{ inputs.referenceId }}" \
+            --workflowRunId "${GITHUB_RUN_ID}" \
+            --status "Salesforce Validation"
+          python scripts/generate_delta.py --base "${{ needs.refactor.outputs.base_sha }}" --head HEAD --out delta
+          python scripts/select_apex_tests.py \
+            --base "${{ needs.refactor.outputs.base_sha }}" \
+            --out selected-tests.json
+          TEST_LEVEL=NoTestRun
+          TEST_ARGS=()
+          if [ "${{ inputs.targetEnvironment }}" = "PROD" ]; then
+            TEST_LEVEL=RunLocalTests
+          else
+            while IFS= read -r test_class; do
+              if [ -n "$test_class" ]; then
+                TEST_ARGS+=(--tests "$test_class")
+              fi
+            done < <(python -c 'import json; print("\n".join(json.load(open("selected-tests.json"))["tests"]))')
+            if [ "${#TEST_ARGS[@]}" -gt 0 ]; then
+              TEST_LEVEL=RunSpecifiedTests
+            fi
+          fi
+          sf project deploy start \
+            --source-dir delta/force-app \
+            --target-org target-org \
+            --dry-run \
+            --test-level "$TEST_LEVEL" \
+            "${TEST_ARGS[@]}" \
+            --json > validation-result.json || true
+          python scripts/parse_validation.py --input validation-result.json --out validation-summary.json
+          STATUS=$?
+          if [ $STATUS -ne 0 ]; then
+            python scripts/salesforce_callback.py \
+              --requestId "${{ inputs.requestId }}" \
+              --referenceId "${{ inputs.referenceId }}" \
+              --workflowRunId "${GITHUB_RUN_ID}" \
+              --status "Salesforce Validation Failed" \
+              --validationStatus "Failed" \
+              --validationResult "$(cat validation-summary.json)" \
+              --errorSummary "$(python -c 'import json;print(json.load(open("validation-summary.json"))["message"])')"
+            exit 1
+          fi
+
+      - id: parse
+        run: |
+          echo "id=$(python -c 'import json;print(json.load(open("validation-summary.json")).get("id") or "")')" >> "$GITHUB_OUTPUT"
+          echo "tests=$(python -c 'import json;d=json.load(open("validation-summary.json"));print(str(d.get("testsRun"))+" tests")')" >> "$GITHUB_OUTPUT"
+
+  pull-request:
+    name: Create pull request
+    needs: [refactor, validate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sourceBranch }}
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: refactor-workspace
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Create branch, commit, and PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SF_CONTROL_CLIENT_ID: ${{ secrets.SF_CONTROL_CLIENT_ID }}
+          SF_CONTROL_USERNAME: ${{ secrets.SF_CONTROL_USERNAME }}
+          SF_CONTROL_INSTANCE_URL: ${{ secrets.SF_CONTROL_INSTANCE_URL }}
+          SF_CONTROL_JWT_KEY: ${{ secrets.SF_CONTROL_JWT_KEY }}
+          BASE_SHA: ${{ needs.refactor.outputs.base_sha }}
+          TEST_SUMMARY: ${{ needs.validate.outputs.test_summary }}
+        run: |
+          set -euo pipefail
+          npm install -g @salesforce/cli
+          python scripts/sf_control_login.py > control-auth.json
+          export SF_CONTROL_ACCESS_TOKEN=$(python -c 'import json;print(json.load(open("control-auth.json"))["accessToken"])')
+          export SF_CONTROL_INSTANCE_URL=$(python -c 'import json;print(json.load(open("control-auth.json"))["instanceUrl"])')
+          rm -f control-auth.json
+          BRANCH="ai-refactor/${{ inputs.referenceId }}"
+          git config user.name "AI Refactor Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add -- force-app
+          if git diff --cached --quiet; then
+            python scripts/salesforce_callback.py \
+              --requestId "${{ inputs.requestId }}" \
+              --referenceId "${{ inputs.referenceId }}" \
+              --workflowRunId "${GITHUB_RUN_ID}" \
+              --status "PR Creation Failed" \
+              --errorSummary "No source changes were available to commit."
+            exit 1
+          fi
+          git commit -m "AI Refactor ${{ inputs.referenceId }}"
+          git push -u origin "$BRANCH" --force-with-lease
+          EXISTING=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' || true)
+          if [ -z "$EXISTING" ]; then
+            python - <<'PY'
+          import json, os
+          request = json.load(open("request.json", encoding="utf-8"))
+          summary = json.load(open("ai-summary.json", encoding="utf-8"))
+          lines = [
+              "## Salesforce request",
+              f"- Reference: {request['referenceId']}",
+              f"- Target: {request['targetEnvironment']}",
+              f"- Base commit: {os.environ['BASE_SHA']}",
+              "",
+              "## Requested change",
+              request["requirement"],
+              "",
+              "## Automated gates",
+              "- Static analysis: passed",
+              "- Salesforce validation: passed",
+              f"- Tests: {os.environ['TEST_SUMMARY']}",
+              "",
+              "## Files changed",
+          ]
+          lines.extend(f"- `{path}`" for path in summary.get("filesChanged", []))
+          open("pr-body.md", "w", encoding="utf-8").write("\n".join(lines) + "\n")
+          PY
+            gh pr create \
+              --base "${{ inputs.sourceBranch }}" \
+              --head "$BRANCH" \
+              --title "AI Refactor - ${{ inputs.referenceId }}" \
+              --body-file pr-body.md
+          fi
+          PR_JSON=$(gh pr view "$BRANCH" --json number,url,headRefOid)
+          python scripts/salesforce_callback.py --payload-json "$(python - <<PY
+          import json, os
+          pr = json.loads('''$PR_JSON''')
+          print(json.dumps({
+            "requestId": "${{ inputs.requestId }}",
+            "referenceId": "${{ inputs.referenceId }}",
+            "workflowRunId": os.environ["GITHUB_RUN_ID"],
+            "status": "PR Created",
+            "branch": "$BRANCH",
+            "pullRequestNumber": pr["number"],
+            "pullRequestUrl": pr["url"],
+            "baseCommit": "${{ needs.refactor.outputs.base_sha }}",
+            "outputCommit": pr["headRefOid"],
+            "validationId": "${{ needs.validate.outputs.validation_id }}",
+            "validationStatus": "Succeeded",
+            "testSummary": "${{ needs.validate.outputs.test_summary }}",
+            "summary": "Automated gates passed. Human review is required before merge and deployment."
+          }))
+          PY
+          )"
+          python scripts/salesforce_callback.py \
+            --requestId "${{ inputs.requestId }}" \
+            --referenceId "${{ inputs.referenceId }}" \
+            --workflowRunId "${GITHUB_RUN_ID}" \
+            --status "Awaiting Approval"

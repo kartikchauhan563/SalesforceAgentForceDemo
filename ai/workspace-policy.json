@@ -1,0 +1,30 @@
+{
+  "allowed_prefixes": [
+    "force-app/main/default/classes/",
+    "force-app/main/default/triggers/",
+    "force-app/main/default/lwc/",
+    "force-app/main/default/aura/",
+    "force-app/main/default/objects/",
+    "force-app/main/default/flows/",
+    "force-app/main/default/pages/",
+    "force-app/main/default/components/"
+  ],
+  "blocked_prefixes": [
+    ".github/",
+    "credentials/",
+    "secrets/",
+    "config/auth/",
+    "connectedApps/",
+    "ai/prompts/"
+  ],
+  "blocked_names": [
+    "CODEOWNERS",
+    ".env",
+    ".pem",
+    "id_rsa",
+    "jwt.key",
+    "server.key"
+  ],
+  "max_changed_files": 20,
+  "max_diff_lines": 2000
+}
