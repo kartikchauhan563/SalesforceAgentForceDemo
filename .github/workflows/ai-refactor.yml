@@ -98,11 +98,16 @@ jobs:
           SF_CONTROL_INSTANCE_URL: ${{ secrets.SF_CONTROL_INSTANCE_URL }}
           SF_CONTROL_JWT_KEY: ${{ secrets.SF_CONTROL_JWT_KEY }}
         run: |
+          set -euo pipefail
           npm install -g @salesforce/cli
           python .ci-tools/scripts/sf_control_login.py > control-auth.json
-          echo "SF_CONTROL_ACCESS_TOKEN=$(python -c 'import json;print(json.load(open("control-auth.json"))["accessToken"])')" >> "$GITHUB_ENV"
-          echo "SF_CONTROL_INSTANCE_URL=$(python -c 'import json;print(json.load(open("control-auth.json"))["instanceUrl"])')" >> "$GITHUB_ENV"
+          ACCESS_TOKEN=$(python -c 'import json;print(json.load(open("control-auth.json"))["accessToken"])')
+          CONTROL_URL=$(python -c 'import json;print(json.load(open("control-auth.json"))["instanceUrl"])')
           rm -f control-auth.json
+          test -n "$ACCESS_TOKEN"
+          test -n "$CONTROL_URL"
+          echo "SF_CONTROL_ACCESS_TOKEN=$ACCESS_TOKEN" >> "$GITHUB_ENV"
+          echo "SF_CONTROL_INSTANCE_URL=$CONTROL_URL" >> "$GITHUB_ENV"
 
       - name: Load canonical request from Salesforce
         env:
@@ -313,6 +318,8 @@ jobs:
           export SF_CONTROL_ACCESS_TOKEN=$(python -c 'import json;print(json.load(open("control-auth.json"))["accessToken"])')
           export SF_CONTROL_INSTANCE_URL=$(python -c 'import json;print(json.load(open("control-auth.json"))["instanceUrl"])')
           rm -f control-auth.json
+          test -n "$SF_CONTROL_ACCESS_TOKEN"
+          test -n "$SF_CONTROL_INSTANCE_URL"
           python .ci-tools/scripts/salesforce_callback.py \
             --requestId "${{ inputs.requestId }}" \
             --referenceId "${{ inputs.referenceId }}" \

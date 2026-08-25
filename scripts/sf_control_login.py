@@ -34,6 +34,8 @@ def main() -> int:
         return 2
     key_file = write_key(args.jwt_key)
     try:
+        # stdout is reserved for the JSON blob callers redirect into a file, so
+        # keep the CLI's own success chatter off it.
         subprocess.run(
             [
                 "sf",
@@ -52,6 +54,7 @@ def main() -> int:
                 args.alias,
             ],
             check=True,
+            stdout=sys.stderr,
         )
         display = subprocess.run(
             ["sf", "org", "display", "--target-org", args.alias, "--json"],
