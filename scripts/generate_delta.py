@@ -73,6 +73,8 @@ def classify(path: str) -> tuple[str, str, Path] | None:
     if not posix.startswith("force-app/"):
         return None
     parts = Path(posix).parts
+    if "bots" in parts:
+        return classify_bot(posix)
     for directory, (md_type, suffix) in TYPE_BY_DIR.items():
         if directory in parts:
             if md_type in {"LightningComponentBundle", "AuraDefinitionBundle", "AiAuthoringBundle"}:
@@ -83,6 +85,22 @@ def classify(path: str) -> tuple[str, str, Path] | None:
             if directory == "objects":
                 return classify_object(posix)
             return md_type, member_name(Path(posix), md_type, suffix), Path(posix)
+    return None
+
+
+def classify_bot(path: str) -> tuple[str, str, Path] | None:
+    parts = Path(path).parts
+    bot_idx = parts.index("bots")
+    if len(parts) <= bot_idx + 2:
+        return None
+    bot_name = parts[bot_idx + 1]
+    source = Path(path)
+    filename = source.name
+    if filename.endswith(".botVersion-meta.xml"):
+        version = filename[: -len(".botVersion-meta.xml")]
+        return "BotVersion", f"{bot_name}.{version}", source
+    if filename.endswith(".bot-meta.xml"):
+        return "Bot", bot_name, source
     return None
 
 
