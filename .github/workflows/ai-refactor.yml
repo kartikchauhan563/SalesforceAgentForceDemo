@@ -157,16 +157,27 @@ jobs:
           AI_API_BASE_URL: ${{ vars.AI_API_BASE_URL }}
           AI_MODEL: ${{ vars.AI_MODEL }}
         run: |
-          if ! python .ci-tools/ai/run_refactor.py \
-              --component-path "$(python -c 'import json;print(json.load(open("request.json"))["componentPath"] or "AUTO")')" \
-              --requirement "$(python -c 'import json;print(json.load(open("request.json"))["requirement"])')" \
-              --summary-out ai-summary.json; then
+          set -euo pipefail
+          ERROR_SUMMARY=""
+          if [ -z "${AI_API_KEY:-}" ]; then
+            ERROR_SUMMARY="AI_API_KEY is missing from the repository Actions secrets."
+          else
+            if ! AI_OUTPUT=$(python .ci-tools/ai/run_refactor.py \
+                --component-path "$(python -c 'import json;print(json.load(open("request.json"))["componentPath"] or "AUTO")')" \
+                --requirement "$(python -c 'import json;print(json.load(open("request.json"))["requirement"])')" \
+                --summary-out ai-summary.json 2>&1); then
+              ERROR_SUMMARY=$(printf '%s\n' "$AI_OUTPUT" | tail -n 5 | tr '\n' ' ')
+            else
+              printf '%s\n' "$AI_OUTPUT"
+            fi
+          fi
+          if [ -n "$ERROR_SUMMARY" ]; then
             python .ci-tools/scripts/salesforce_callback.py \
               --requestId "${{ inputs.requestId }}" \
               --referenceId "${{ inputs.referenceId }}" \
               --workflowRunId "${GITHUB_RUN_ID}" \
               --status "Refactor Failed" \
-              --errorSummary "The AI coding step failed or produced no approved source changes."
+              --errorSummary "${ERROR_SUMMARY:0:1000}"
             exit 1
           fi
 

@@ -143,7 +143,7 @@ start_agent agent_router:
 
 subagent intelligent_refactor:
     label: "Intelligent Salesforce Implementation"
-    description: "Submits a natural-language requirement to a controlled GitHub Actions pipeline that discovers components, validates changes, and creates a pull request"
+    description: "Updates Salesforce code on an existing GitHub branch through a controlled pipeline. Never handles an external repository URL or a request to copy/import a repository; those must complete in Branch Operations first."
     reasoning:
         instructions: ->
             | You must call an action on every turn where the user asks for an implementation, change, or status.
@@ -286,7 +286,7 @@ subagent intelligent_refactor:
 
 subagent branch_operations:
     label: "Branch Operations"
-    description: "Creates GitHub branches and copies all assets from one branch to a new branch using cloud git refs"
+    description: "Handles every request containing an external GitHub repository URL, including combined requests to copy/import a repository and then update its code. The repository copy must run before any intelligent implementation. Also creates and copies GitHub branches."
     reasoning:
         instructions: ->
             | You complete GitHub branch work in Salesforce cloud. Never suggest local clone, checkout, or gh commands.
