@@ -369,15 +369,24 @@ jobs:
 
       - name: Salesforce CLI and target login
         env:
-          # DEV currently uses the control org as its validation target. This
-          # avoids the retired sca-ff35513e target credential while preserving
-          # separate environment credentials for QA, UAT, and PROD.
-          SF_CLIENT_ID: ${{ inputs.targetEnvironment == 'DEV' && secrets.SF_CONTROL_CLIENT_ID || secrets.SF_CLIENT_ID }}
-          SF_USERNAME: ${{ inputs.targetEnvironment == 'DEV' && secrets.SF_CONTROL_USERNAME || secrets.SF_USERNAME }}
-          SF_INSTANCE_URL: ${{ inputs.targetEnvironment == 'DEV' && secrets.SF_CONTROL_INSTANCE_URL || secrets.SF_INSTANCE_URL }}
-          SF_JWT_KEY: ${{ inputs.targetEnvironment == 'DEV' && secrets.SF_CONTROL_JWT_KEY || secrets.SF_JWT_KEY }}
+          # DEV validates against the control org itself. The CLI keys auth by
+          # username and moves the alias on re-login, so authenticating that one
+          # username under both target-org and control-org would leave only the
+          # alias created last. DEV therefore reuses the control-plane alias,
+          # while QA, UAT, and PROD keep their own distinct credentials.
+          TARGET_IS_CONTROL: ${{ inputs.targetEnvironment == 'DEV' }}
+          SF_CLIENT_ID: ${{ secrets.SF_CLIENT_ID }}
+          SF_USERNAME: ${{ secrets.SF_USERNAME }}
+          SF_INSTANCE_URL: ${{ secrets.SF_INSTANCE_URL }}
+          SF_JWT_KEY: ${{ secrets.SF_JWT_KEY }}
         run: |
+          set -euo pipefail
           npm install -g @salesforce/cli
+          if [ "$TARGET_IS_CONTROL" = "true" ]; then
+            echo "TARGET_ORG=control-org" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          echo "TARGET_ORG=target-org" >> "$GITHUB_ENV"
           python - <<'PY'
           import os, tempfile, subprocess
           from pathlib import Path
@@ -416,7 +425,7 @@ jobs:
                 API_NAME="$(basename "$(dirname "$changed_file")")"
                 if ! sf agent validate authoring-bundle \
                   --api-name "$API_NAME" \
-                  --target-org target-org \
+                  --target-org "$TARGET_ORG" \
                   --json > agent-validation-result.json; then
                   AGENT_ERROR="$(python -c 'import json; d=json.load(open("agent-validation-result.json")); print((d.get("message") or "Agent Script validation failed.")[:1000])')"
                   python .ci-tools/scripts/salesforce_callback.py \
@@ -452,7 +461,7 @@ jobs:
           if [ -d "$APEX_DIR" ]; then
             sf project deploy start \
               --source-dir "$APEX_DIR" \
-              --target-org target-org \
+              --target-org "$TARGET_ORG" \
               --dry-run \
               --test-level "$TEST_LEVEL" \
               "${TEST_ARGS[@]}" \
