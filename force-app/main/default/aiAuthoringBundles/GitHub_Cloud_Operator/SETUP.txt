@@ -1,0 +1,26 @@
+GitHub Cloud Operator — Salesforce Setup
+
+1. Create a GitHub personal access token with repo scope for kartikchauhan563/SalesforceAgentForceDemo.
+2. Deploy this metadata to the org.
+3. In Setup, open Named Credentials -> External Credentials -> GitHub_API.
+4. Open named principal DefaultGroup and set AccessToken to the GitHub token. Do not put the token in source control.
+5. Assign permission set "GitHub Cloud Agent Access" to the Einstein Agent User that runs GitHub Cloud Operator.
+6. In Agentforce Builder, open agent GitHub_Cloud_Operator and test with:
+   - Give me a GitHub URL, then a new branch name, and copy that repository into SalesforceAgentForceDemo
+   - Create a branch called demo-1
+   - Copy everything from master onto a new branch called demo-1
+   - List branches in kartikchauhan563/SalesforceAgentForceDemo
+
+Copy an external GitHub repository
+- Deploy Apex actions GitHubAction_CopyExternalRepo and GitHubAction_ConfirmCopiedBranch.
+- Add those Apex actions to the Branch Operations topic (labels GitHub Copy External Repository and GitHub Confirm Copied Branch).
+- Push `.github/workflows/copy-and-apply.yml` to the default branch of the DESTINATION GitHub repo (kartikchauhan563/SalesforceAgentForceDemo). The token must be able to dispatch workflows.
+- The GitHub token needs access to read the source repo (public repos work with a normal PAT). Private source repos require a token that can clone them; GITHUB_TOKEN only writes the destination.
+
+Experience Cloud deployment
+- Site: GitHub Cloud Operator
+- Public URL: https://orgfarm-686e9ab33a-dev-ed.develop.my.site.com/kartikgithubagent/
+- Messaging channel: GitHub_Cloud_Operator
+- Embedded Service deployment: GitHub_Operator_Web
+- Fallback queue: GitHub_Operator_Fallback
+- The site permits guest access. Keep confirmation enabled on every GitHub write action and limit the GitHub token to only the required repository.

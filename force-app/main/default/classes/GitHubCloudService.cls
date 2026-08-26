@@ -1,6 +1,5 @@
 public with sharing class GitHubCloudService {
     private static final Integer MAX_CONTENT_CHARS = 20000;
-    private static final String COPY_EXTERNAL_WORKFLOW = 'copy-external-repo.yml';
 
     public class Result {
         public Boolean success;
@@ -692,8 +691,8 @@ public with sharing class GitHubCloudService {
     }
 
     // Copies every file from an external GitHub URL into our repository as a new branch.
-    // Copy-only cross-repo work dispatches copy-external-repo.yml.
-    // Copy plus a natural-language change dispatches copy-and-apply.yml after creating an AIR request.
+    // Copy-only work dispatches copy-and-apply.yml without a requirement, so the apply job is skipped.
+    // Copy plus a natural-language change creates an AIR request and runs copy then AI on that branch.
     public static Result copyExternalRepository(
         String sourceRepoUrl,
         String sourceBranch,
@@ -779,7 +778,8 @@ public with sharing class GitHubCloudService {
             };
             GitHubCloudClient.post(
                 dest.namedCredential,
-                '/repos/' + dest.owner + '/' + dest.repo + '/actions/workflows/' + COPY_EXTERNAL_WORKFLOW + '/dispatches',
+                '/repos/' + dest.owner + '/' + dest.repo + '/actions/workflows/' +
+                    AIRefactorConstants.WORKFLOW_COPY_AND_APPLY + '/dispatches',
                 JSON.serialize(new Map<String, Object>{ 'ref' => workflowRef, 'inputs' => inputs })
             );
 
@@ -799,7 +799,7 @@ public with sharing class GitHubCloudService {
                     'owner' => dest.owner,
                     'repo' => dest.repo,
                     'newBranch' => toBranch,
-                    'workflow' => COPY_EXTERNAL_WORKFLOW,
+                    'workflow' => AIRefactorConstants.WORKFLOW_COPY_AND_APPLY,
                     'htmlUrl' => branchUrl(dest, toBranch),
                     'zipUrl' => zipUrl
                 }
@@ -809,7 +809,7 @@ public with sharing class GitHubCloudService {
         } catch (GitHubCloudClient.CalloutException ex) {
             String extra = '';
             if (ex.getMessage() != null && ex.getMessage().contains('(404)')) {
-                extra = ' Confirm that ' + COPY_EXTERNAL_WORKFLOW +
+                extra = ' Confirm that ' + AIRefactorConstants.WORKFLOW_COPY_AND_APPLY +
                     ' exists on the default branch of ' + dest.owner + '/' + dest.repo +
                     ' and that the GitHub token can dispatch workflows.';
             }
