@@ -63,6 +63,23 @@ def payload_from_args(args: argparse.Namespace) -> dict:
     return data
 
 
+def cli_error(response: subprocess.CompletedProcess) -> str:
+    """Extract the Salesforce error text from an `sf --json` failure."""
+    for stream in (response.stdout, response.stderr):
+        if not stream:
+            continue
+        try:
+            parsed = json.loads(stream)
+        except json.JSONDecodeError:
+            continue
+        message = parsed.get("message") or parsed.get("error")
+        if not message and isinstance(parsed.get("result"), dict):
+            message = parsed["result"].get("message")
+        if message:
+            return str(message).strip()
+    return ((response.stderr or "") + (response.stdout or "")).strip() or "no output"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--target-org", default=os.environ.get("SF_CONTROL_TARGET_ORG"))
@@ -93,10 +110,16 @@ def main() -> int:
                     "@" + handle.name,
                     "--json",
                 ],
-                check=True,
                 capture_output=True,
                 text=True,
             )
+            if response.returncode != 0:
+                print(
+                    "Salesforce callback failed with status "
+                    f"{response.returncode}: {cli_error(response)}",
+                    file=sys.stderr,
+                )
+                return 1
             print(response.stdout)
             return 0
         finally:

@@ -70,8 +70,12 @@ public with sharing class AIRefactorConstants {
                 STATUS_WORKSPACE_FAILED,
                 STATUS_CANCELLED
             },
+            // Salesforce validation is optional, so static analysis can hand off
+            // straight to the pull request stage when it is skipped.
             STATUS_STATIC => new Set<String>{
                 STATUS_SF_VALIDATION,
+                STATUS_PR_CREATED,
+                STATUS_PR_FAILED,
                 STATUS_STATIC_FAILED,
                 STATUS_CANCELLED
             },
