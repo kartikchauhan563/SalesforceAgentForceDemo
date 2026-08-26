@@ -105,6 +105,12 @@ start_agent agent_router:
               Route create-branch, copy/clone-assets, and copy-from-GitHub-URL requests to branch_operations.
               Route "copy this GitHub repo into our repo", "import this repository", or a pasted github.com URL
               when the user wants the complete code in a new branch to branch_operations.
+              A request that combines an external repository copy with a later implementation requirement must
+              always start in branch_operations, even when it also contains words such as change, implement,
+              refactor, or update. Copy the repository first. Never submit the combined request directly to
+              intelligent_refactor and never use master as its source branch. Only after the copy action succeeds
+              and ActiveNewBranch contains the copied branch may the implementation requirement be submitted to
+              intelligent_refactor using ActiveNewBranch as sourceBranch.
               Route requests that ask you to write a specific new Salesforce component such as a flow, Apex class,
               trigger, or LWC and put that code into a new branch to branch_operations. That route writes the file
               immediately and returns a download link in the same reply.
@@ -305,6 +311,11 @@ subagent branch_operations:
                 Destination owner/repo stay our defaults unless the user names a different destination.
                 Never use GitHub_Copy_Branch_Assets for a different GitHub repository URL. Call
                 GitHub_Copy_External_Repository with sourceRepoUrl and newBranch.
+                If the same message also contains requirements for changing the copied code, do not submit those
+                requirements before the copy. On the first confirmed turn call only
+                GitHub_Copy_External_Repository. A refactor submitted before the copy would incorrectly inspect
+                master. Preserve the requirement in the conversation, report the copy result, and ask the user to
+                confirm that the copied branch should now be updated.
                 After that action succeeds, save ActiveSourceRepoUrl and ActiveNewBranch, then ask exactly:
                 "Do you want to update anything in this new branch?"
                 If they say no, stop. If they say yes or give a requirement, first call

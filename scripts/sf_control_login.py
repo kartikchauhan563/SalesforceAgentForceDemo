@@ -5,10 +5,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+
+SF_COMMAND = shutil.which("sf") or shutil.which("sf.cmd") or "sf"
 
 
 def write_key(raw: str) -> str:
@@ -38,7 +41,7 @@ def main() -> int:
         # keep the CLI's own success chatter off it.
         subprocess.run(
             [
-                "sf",
+                SF_COMMAND,
                 "org",
                 "login",
                 "jwt",
@@ -57,7 +60,15 @@ def main() -> int:
             stdout=sys.stderr,
         )
         display = subprocess.run(
-            ["sf", "org", "display", "--target-org", args.alias, "--json"],
+            [
+                SF_COMMAND,
+                "org",
+                "display",
+                "--target-org",
+                args.alias,
+                "--verbose",
+                "--json",
+            ],
             check=True,
             capture_output=True,
             text=True,

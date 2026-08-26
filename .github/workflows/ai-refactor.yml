@@ -100,14 +100,8 @@ jobs:
         run: |
           set -euo pipefail
           npm install -g @salesforce/cli
-          python .ci-tools/scripts/sf_control_login.py > control-auth.json
-          ACCESS_TOKEN=$(python -c 'import json;print(json.load(open("control-auth.json"))["accessToken"])')
-          CONTROL_URL=$(python -c 'import json;print(json.load(open("control-auth.json"))["instanceUrl"])')
-          rm -f control-auth.json
-          test -n "$ACCESS_TOKEN"
-          test -n "$CONTROL_URL"
-          echo "SF_CONTROL_ACCESS_TOKEN=$ACCESS_TOKEN" >> "$GITHUB_ENV"
-          echo "SF_CONTROL_INSTANCE_URL=$CONTROL_URL" >> "$GITHUB_ENV"
+          python .ci-tools/scripts/sf_control_login.py > /dev/null
+          echo "SF_CONTROL_TARGET_ORG=control-org" >> "$GITHUB_ENV"
 
       - name: Load canonical request from Salesforce
         env:
@@ -134,9 +128,6 @@ jobs:
           PY
 
       - name: Callback preparing workspace
-        env:
-          SF_CONTROL_ACCESS_TOKEN: ${{ env.SF_CONTROL_ACCESS_TOKEN }}
-          SF_CONTROL_INSTANCE_URL: ${{ env.SF_CONTROL_INSTANCE_URL }}
         run: |
           python .ci-tools/scripts/salesforce_callback.py \
             --requestId "${{ inputs.requestId }}" \
@@ -314,12 +305,8 @@ jobs:
           SF_CONTROL_INSTANCE_URL: ${{ secrets.SF_CONTROL_INSTANCE_URL }}
           SF_CONTROL_JWT_KEY: ${{ secrets.SF_CONTROL_JWT_KEY }}
         run: |
-          python .ci-tools/scripts/sf_control_login.py > control-auth.json
-          export SF_CONTROL_ACCESS_TOKEN=$(python -c 'import json;print(json.load(open("control-auth.json"))["accessToken"])')
-          export SF_CONTROL_INSTANCE_URL=$(python -c 'import json;print(json.load(open("control-auth.json"))["instanceUrl"])')
-          rm -f control-auth.json
-          test -n "$SF_CONTROL_ACCESS_TOKEN"
-          test -n "$SF_CONTROL_INSTANCE_URL"
+          python .ci-tools/scripts/sf_control_login.py > /dev/null
+          export SF_CONTROL_TARGET_ORG=control-org
           python .ci-tools/scripts/salesforce_callback.py \
             --requestId "${{ inputs.requestId }}" \
             --referenceId "${{ inputs.referenceId }}" \
@@ -415,10 +402,8 @@ jobs:
         run: |
           set -euo pipefail
           npm install -g @salesforce/cli
-          python .ci-tools/scripts/sf_control_login.py > control-auth.json
-          export SF_CONTROL_ACCESS_TOKEN=$(python -c 'import json;print(json.load(open("control-auth.json"))["accessToken"])')
-          export SF_CONTROL_INSTANCE_URL=$(python -c 'import json;print(json.load(open("control-auth.json"))["instanceUrl"])')
-          rm -f control-auth.json
+          python .ci-tools/scripts/sf_control_login.py > /dev/null
+          export SF_CONTROL_TARGET_ORG=control-org
           BRANCH="ai-refactor/${{ inputs.referenceId }}"
           git config user.name "AI Refactor Bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
