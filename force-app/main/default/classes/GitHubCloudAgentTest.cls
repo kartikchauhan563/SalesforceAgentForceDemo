@@ -238,13 +238,13 @@ private class GitHubCloudAgentTest {
 
         Test.setMock(HttpCalloutMock.class, new GitHubCloudMock().add(204, ''));
         Test.startTest();
-        GitHubAction_CopyExternalRepo.Request req = new GitHubAction_CopyExternalRepo.Request();
+        GitHubAction_CopyAndApplyRepo.Request req = new GitHubAction_CopyAndApplyRepo.Request();
         req.sourceRepoUrl = 'https://github.com/acme/loan-app';
         req.newBranch = 'imported-loan-app-ai';
         req.requirement = 'Rename the agent to Salesforce Best Agent.';
         req.targetEnvironment = 'DEV';
-        List<GitHubAction_CopyExternalRepo.Response> res = GitHubAction_CopyExternalRepo.run(
-            new List<GitHubAction_CopyExternalRepo.Request>{ req }
+        List<GitHubAction_CopyAndApplyRepo.Response> res = GitHubAction_CopyAndApplyRepo.run(
+            new List<GitHubAction_CopyAndApplyRepo.Request>{ req }
         );
         Test.stopTest();
         System.assertEquals(true, res[0].success, res[0].message);

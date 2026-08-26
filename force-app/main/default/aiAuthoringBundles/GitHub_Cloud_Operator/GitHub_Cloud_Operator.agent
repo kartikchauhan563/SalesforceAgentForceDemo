@@ -109,7 +109,7 @@ start_agent agent_router:
               always start in branch_operations, even when it also contains words such as change, implement,
               refactor, or update. Copy the repository first. Never submit the combined request directly to
               intelligent_refactor and never use master as its source branch. On that first confirmed turn, pass
-              the user's change text as requirement to GitHub_Copy_External_Repository so one pipeline copies the
+              the user's change text as requirement to GitHub_Copy_And_Apply_Repository so one pipeline copies the
               repo and then applies AI changes on the new branch. Do not wait for a second turn to submit the
               requirement when the user already described the change.
               Route requests that ask you to write a specific new Salesforce component such as a flow, Apex class,
@@ -312,9 +312,10 @@ subagent branch_operations:
                 Destination owner/repo stay our defaults unless the user names a different destination.
                 Never use GitHub_Copy_Branch_Assets for a different GitHub repository URL. Call
                 GitHub_Copy_External_Repository with sourceRepoUrl and newBranch.
-                If the same message also contains requirements for changing the copied code, pass those as
+                If the same message also contains requirements for changing the copied code, call
+                GitHub_Copy_And_Apply_Repository and pass those as
                 requirement, targetEnvironment if named (otherwise DEV), and componentPath AUTO. Call
-                GitHub_Copy_External_Repository once on the first confirmed turn. That starts one pipeline that
+                GitHub_Copy_And_Apply_Repository once on the first confirmed turn. That starts one pipeline that
                 copies the repository and then applies the AI changes on the new branch. Do not call
                 intelligent_refactor for that combined request. After the action succeeds, save ActiveSourceRepoUrl
                 and ActiveNewBranch, report the AIR reference and ZIP link, and tell the user the copied branch
@@ -575,10 +576,10 @@ subagent branch_operations:
                     is_displayable: True
                     filter_from_agent: False
 
-        GitHub_Copy_External_Repository:
-            label: "GitHub Copy External Repository"
-            description: "Copies complete code from a GitHub repository URL into our repository as a new branch. Pass requirement to copy and apply AI changes in one pipeline."
-            target: "apex://GitHubAction_CopyExternalRepo"
+        GitHub_Copy_And_Apply_Repository:
+            label: "GitHub Copy And Apply Repository"
+            description: "Runs one pipeline that copies a repository to a new branch and applies the required AI changes on that same branch."
+            target: "apex://GitHubAction_CopyAndApplyRepo"
             require_user_confirmation: True
             include_in_progress_indicator: True
             progress_indicator_message: "Copying the complete repository into a new branch"
@@ -610,7 +611,7 @@ subagent branch_operations:
                 requirement: string
                     label: "Requirement"
                     description: "Natural-language changes to apply with AI on the copied branch. Include this when the user already described the change."
-                    is_required: False
+                    is_required: True
                 targetEnvironment: string
                     label: "Target Environment"
                     description: "Salesforce validation target. Use DEV unless the user names QA, UAT, or PROD."
@@ -642,6 +643,56 @@ subagent branch_operations:
                     filter_from_agent: False
                 referenceId: string
                     label: "Reference Id"
+                    is_displayable: True
+                    filter_from_agent: False
+
+        GitHub_Copy_External_Repository:
+            label: "GitHub Copy External Repository"
+            description: "Copies complete code from a GitHub repository URL into our repository as a new branch without applying changes."
+            target: "apex://GitHubAction_CopyExternalRepo"
+            require_user_confirmation: True
+            include_in_progress_indicator: True
+            progress_indicator_message: "Copying the complete repository into a new branch"
+            inputs:
+                sourceRepoUrl: string
+                    label: "Source Repository URL"
+                    description: "GitHub URL to copy from, such as https://github.com/owner/repo."
+                    is_required: True
+                sourceBranch: string
+                    label: "Source Branch"
+                    description: "Optional branch in the source repository."
+                    is_required: False
+                newBranch: string
+                    label: "New Branch"
+                    description: "Destination branch in our repository that receives the complete copy."
+                    is_required: True
+                owner: string
+                    label: "Owner"
+                    description: "Destination GitHub owner. Leave empty to use kartikchauhan563."
+                    is_required: False
+                repo: string
+                    label: "Repository"
+                    description: "Destination repository name or owner/repo."
+                    is_required: False
+                ownerRepo: string
+                    label: "Owner And Repo"
+                    description: "Destination identifier such as kartikchauhan563/SalesforceAgentForceDemo."
+                    is_required: False
+            outputs:
+                success: boolean
+                    label: "Success"
+                    is_displayable: False
+                    filter_from_agent: False
+                message: string
+                    label: "Message"
+                    is_displayable: True
+                    filter_from_agent: False
+                detailsJson: string
+                    label: "Details JSON"
+                    is_displayable: False
+                    filter_from_agent: False
+                branchZipUrl: string
+                    label: "Download ZIP URL"
                     is_displayable: True
                     filter_from_agent: False
 
