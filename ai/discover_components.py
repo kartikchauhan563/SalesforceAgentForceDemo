@@ -204,11 +204,12 @@ def discover(
     root: Path = ROOT,
     limit: int = 16,
     minimum_score: int = 1,
+    policy_root: Path | None = None,
 ) -> list[Candidate]:
     tokens = normalize_tokens(requirement)
     if not tokens:
         return []
-    policy = load_policy(root)
+    policy = load_policy(policy_root or root)
     files = inventory(root, policy)
     ranked = [score_file(root, path, tokens) for path in files]
     ranked = [item for item in ranked if item.score >= minimum_score]

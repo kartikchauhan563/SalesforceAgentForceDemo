@@ -52,7 +52,12 @@ def read_component_files(root: Path, component_path: str) -> dict[str, str]:
 
 
 def discover_component_files(root: Path, requirement: str, limit: int = 16) -> dict[str, str]:
-    candidates = discover(requirement, root=root, limit=limit)
+    candidates = discover(
+        requirement,
+        root=root,
+        limit=limit,
+        policy_root=AI_DIR.parent,
+    )
     if not candidates:
         raise SystemExit(
             "No relevant Salesforce components were discovered. "
@@ -67,7 +72,7 @@ def discover_component_files(root: Path, requirement: str, limit: int = 16) -> d
 
 def is_allowed_output_path(root: Path, path: str) -> bool:
     normalized = path.replace("\\", "/").lstrip("./")
-    policy = load_policy(root)
+    policy = load_policy(AI_DIR.parent)
     return is_allowed_path(normalized, policy) and not is_blocked_path(normalized, policy)
 
 

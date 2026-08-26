@@ -77,6 +77,28 @@ class DiscoveryTest(unittest.TestCase):
             paths,
         )
 
+    def test_discovers_source_with_policy_from_separate_tooling_root(self) -> None:
+        policy_root = self.root / ".ci-tools"
+        (policy_root / "ai").mkdir(parents=True)
+        source_policy = self.root / "ai" / "workspace-policy.json"
+        (policy_root / "ai" / "workspace-policy.json").write_text(
+            source_policy.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        source_policy.unlink()
+        paths = [
+            candidate.path
+            for candidate in discover(
+                "Prevent duplicate loan decisions",
+                root=self.root,
+                policy_root=policy_root,
+            )
+        ]
+        self.assertIn(
+            "force-app/main/default/classes/LoanDecisionService.cls",
+            paths,
+        )
+
     def test_splits_salesforce_identifiers(self) -> None:
         self.assertTrue(
             {"loan", "application", "trigger", "handler"}.issubset(
