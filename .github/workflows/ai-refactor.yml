@@ -38,7 +38,13 @@ concurrency:
 jobs:
   refactor:
     name: AI refactor
-    runs-on: ubuntu-latest
+    # The approved model endpoint is only resolvable from the PwC network.
+    # Keep the AI job on the dedicated internal runner; downstream validation
+    # and PR creation continue on isolated GitHub-hosted runners.
+    runs-on: [self-hosted, Windows, X64, pwc-network]
+    defaults:
+      run:
+        shell: bash
     outputs:
       base_sha: ${{ steps.base.outputs.sha }}
     steps:
