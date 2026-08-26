@@ -14,6 +14,7 @@ TYPE_BY_DIR = {
     "triggers": ("ApexTrigger", ".trigger"),
     "lwc": ("LightningComponentBundle", None),
     "aura": ("AuraDefinitionBundle", None),
+    "aiAuthoringBundles": ("AiAuthoringBundle", None),
     "flexipages": ("FlexiPage", ".flexipage-meta.xml"),
     "flows": ("Flow", ".flow-meta.xml"),
     "objects": ("CustomObject", ".object-meta.xml"),
@@ -56,7 +57,7 @@ def bundle_root(path: str, kind: str) -> str | None:
 
 
 def member_name(path: Path, md_type: str, suffix: str | None) -> str:
-    if md_type in {"LightningComponentBundle", "AuraDefinitionBundle"}:
+    if md_type in {"LightningComponentBundle", "AuraDefinitionBundle", "AiAuthoringBundle"}:
         return path.name
     name = path.name
     if suffix and name.endswith(suffix):
@@ -74,7 +75,7 @@ def classify(path: str) -> tuple[str, str, Path] | None:
     parts = Path(posix).parts
     for directory, (md_type, suffix) in TYPE_BY_DIR.items():
         if directory in parts:
-            if md_type in {"LightningComponentBundle", "AuraDefinitionBundle"}:
+            if md_type in {"LightningComponentBundle", "AuraDefinitionBundle", "AiAuthoringBundle"}:
                 root = bundle_root(posix, directory)
                 if not root:
                     return None
