@@ -308,10 +308,13 @@ jobs:
 
       - name: Salesforce CLI and target login
         env:
-          SF_CLIENT_ID: ${{ secrets.SF_CLIENT_ID }}
-          SF_USERNAME: ${{ secrets.SF_USERNAME }}
-          SF_INSTANCE_URL: ${{ secrets.SF_INSTANCE_URL }}
-          SF_JWT_KEY: ${{ secrets.SF_JWT_KEY }}
+          # DEV currently uses the control org as its validation target. This
+          # avoids the retired sca-ff35513e target credential while preserving
+          # separate environment credentials for QA, UAT, and PROD.
+          SF_CLIENT_ID: ${{ inputs.targetEnvironment == 'DEV' && secrets.SF_CONTROL_CLIENT_ID || secrets.SF_CLIENT_ID }}
+          SF_USERNAME: ${{ inputs.targetEnvironment == 'DEV' && secrets.SF_CONTROL_USERNAME || secrets.SF_USERNAME }}
+          SF_INSTANCE_URL: ${{ inputs.targetEnvironment == 'DEV' && secrets.SF_CONTROL_INSTANCE_URL || secrets.SF_INSTANCE_URL }}
+          SF_JWT_KEY: ${{ inputs.targetEnvironment == 'DEV' && secrets.SF_CONTROL_JWT_KEY || secrets.SF_JWT_KEY }}
         run: |
           npm install -g @salesforce/cli
           python - <<'PY'
