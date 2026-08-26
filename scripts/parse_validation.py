@@ -39,7 +39,9 @@ def summarize(payload: dict) -> dict:
     test_names = []
     for failure in test_failures[:20]:
         if isinstance(failure, dict):
-            test_names.append(f"{failure.get('name')}.{failure.get('methodName')}")
+            test_name = f"{failure.get('name')}.{failure.get('methodName')}"
+            message = failure.get("message")
+            test_names.append(f"{test_name}: {message}" if message else test_name)
         else:
             test_names.append(str(failure))
     summary = {

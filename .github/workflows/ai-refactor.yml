@@ -457,10 +457,18 @@ jobs:
               TEST_LEVEL=RunSpecifiedTests
             fi
           fi
-          APEX_DIR=force-app/main/default/classes
-          if [ -d "$APEX_DIR" ]; then
+          SOURCE_ARGS=()
+          for source_dir in \
+            force-app/main/default/classes \
+            force-app/main/default/customPermissions \
+            force-app/main/default/permissionsets; do
+            if [ -d "$source_dir" ]; then
+              SOURCE_ARGS+=(--source-dir "$source_dir")
+            fi
+          done
+          if [ "${#SOURCE_ARGS[@]}" -gt 0 ]; then
             sf project deploy start \
-              --source-dir "$APEX_DIR" \
+              "${SOURCE_ARGS[@]}" \
               --target-org "$TARGET_ORG" \
               --dry-run \
               --test-level "$TEST_LEVEL" \
@@ -468,7 +476,7 @@ jobs:
               --json > validation-result.json || true
           else
             # Imported repositories can use a different source layout, leaving
-            # no Apex to dry-run against the target org.
+            # no supported Salesforce source to dry-run against the target org.
             echo '{"status":0,"result":{"success":true,"id":"","numberTestsTotal":0}}' > validation-result.json
           fi
           STATUS=0
