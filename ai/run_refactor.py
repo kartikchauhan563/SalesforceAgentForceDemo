@@ -82,7 +82,14 @@ def call_model(system_prompt: str, user_prompt: str) -> str:
         raise SystemExit(
             "AI_API_KEY is not set. The AI refactor job cannot run without an approved model credential."
         )
-    base = (os.environ.get("AI_API_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
+    explicit_url = (os.environ.get("AI_API_URL") or "").strip()
+    base = (os.environ.get("AI_API_BASE_URL") or "https://api.openai.com/v1").strip().rstrip("/")
+    if explicit_url:
+        completions_url = explicit_url
+    elif base.endswith("/chat/completions"):
+        completions_url = base
+    else:
+        completions_url = base + "/chat/completions"
     model = os.environ.get("AI_MODEL") or "gpt-4.1"
     payload = {
         "model": model,
@@ -93,7 +100,7 @@ def call_model(system_prompt: str, user_prompt: str) -> str:
         ],
     }
     request = urllib.request.Request(
-        base + "/chat/completions",
+        completions_url,
         data=json.dumps(payload).encode("utf-8"),
         headers={
             "Content-Type": "application/json",

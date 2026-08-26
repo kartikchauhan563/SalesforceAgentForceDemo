@@ -155,6 +155,7 @@ jobs:
         env:
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
           AI_API_BASE_URL: ${{ vars.AI_API_BASE_URL }}
+          AI_API_URL: ${{ vars.AI_API_URL }}
           AI_MODEL: ${{ vars.AI_MODEL }}
         run: |
           set -euo pipefail
