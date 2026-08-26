@@ -69,6 +69,11 @@ jobs:
         with:
           ref: ${{ inputs.sourceBranch }}
           fetch-depth: 0
+          # Imported repositories can contain deep archive paths that exceed
+          # Windows limits. The coding pipeline only needs deployable source.
+          sparse-checkout: |
+            force-app
+            manifest
 
       # The source branch can be an orphan branch imported from an external
       # repository, so it carries no pipeline tooling. Take ai/ and scripts/
