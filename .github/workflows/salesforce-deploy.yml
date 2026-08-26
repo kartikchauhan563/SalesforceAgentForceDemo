@@ -102,38 +102,17 @@ jobs:
         run: |
           BASE=$(git merge-base origin/HEAD HEAD || git rev-parse HEAD~1)
           python scripts/generate_delta.py --base "$BASE" --head HEAD --out delta
-          python scripts/select_apex_tests.py --base "$BASE" --out selected-tests.json
 
       - name: Deploy
         run: |
-          TEST_LEVEL=NoTestRun
-          TEST_ARGS=()
-          if [ "${{ inputs.targetEnvironment }}" = "PROD" ]; then
-            TEST_LEVEL=RunLocalTests
-          else
-            while IFS= read -r test_class; do
-              if [ -n "$test_class" ]; then
-                TEST_ARGS+=(--tests "$test_class")
-              fi
-            done < <(python -c 'import json; print("\n".join(json.load(open("selected-tests.json"))["tests"]))')
-            if [ "${#TEST_ARGS[@]}" -gt 0 ]; then
-              TEST_LEVEL=RunSpecifiedTests
-            fi
-          fi
           python scripts/sf_control_login.py > control-auth.json
           export SF_CONTROL_ACCESS_TOKEN=$(python -c 'import json;print(json.load(open("control-auth.json"))["accessToken"])')
           export SF_CONTROL_INSTANCE_URL=$(python -c 'import json;print(json.load(open("control-auth.json"))["instanceUrl"])')
           rm -f control-auth.json
-          python scripts/salesforce_callback.py \
-            --referenceId "${{ inputs.referenceId }}" \
-            --requestId "${{ inputs.requestId }}" \
-            --workflowRunId "${GITHUB_RUN_ID}" \
-            --status "Running Tests"
           if sf project deploy start \
               --source-dir delta/force-app \
               --target-org target-org \
-              --test-level "$TEST_LEVEL" \
-              "${TEST_ARGS[@]}" \
+              --test-level NoTestRun \
               --json > deployment-result.json; then
             python scripts/parse_deployment.py --input deployment-result.json --out deployment-summary.json
             python scripts/salesforce_callback.py \

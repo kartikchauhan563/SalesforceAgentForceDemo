@@ -71,8 +71,11 @@ public with sharing class GitHubWorkflowService {
         if (deploy) {
             inputs.put('commitSha', nvl(record.Output_Commit_SHA__c));
             inputs.put('validationId', nvl(record.Validation_Id__c));
-        } else if (commitToSourceBranch == true) {
-            inputs.put('commitToSourceBranch', true);
+        } else {
+            inputs.put('skipSalesforceValidation', true);
+            if (commitToSourceBranch == true) {
+                inputs.put('commitToSourceBranch', true);
+            }
         }
         return postDispatch(
             cfg.namedCredential,

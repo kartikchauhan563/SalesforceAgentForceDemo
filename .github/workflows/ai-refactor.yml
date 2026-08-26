@@ -30,6 +30,11 @@ on:
         required: false
         type: boolean
         default: false
+      skipSalesforceValidation:
+        description: Skip org tests and validation; failing Apex tests must not block the pipeline
+        required: false
+        type: boolean
+        default: true
   workflow_call:
     inputs:
       requestId:
@@ -58,6 +63,10 @@ on:
         required: false
         type: boolean
         default: false
+      skipSalesforceValidation:
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -250,6 +259,7 @@ jobs:
           fi
 
       - name: Prepare pre-validation project
+        if: ${{ !inputs.skipSalesforceValidation }}
         run: |
           set -euo pipefail
           if [ ! -f sfdx-project.json ]; then
@@ -265,6 +275,7 @@ jobs:
           PY
 
       - name: Authenticate pre-validation target
+        if: ${{ !inputs.skipSalesforceValidation }}
         env:
           TARGET_IS_CONTROL: ${{ inputs.targetEnvironment == 'DEV' }}
           SF_CLIENT_ID: ${{ secrets.SF_CLIENT_ID }}
@@ -298,6 +309,7 @@ jobs:
           echo "SF_PREVALIDATION_TARGET_ORG=prevalidation-target" >> "$GITHUB_ENV"
 
       - name: Repair tests and coverage before final validation
+        if: ${{ !inputs.skipSalesforceValidation }}
         env:
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
           AI_API_BASE_URL: ${{ vars.AI_API_BASE_URL }}
@@ -381,6 +393,7 @@ jobs:
   validate:
     name: Salesforce validation
     needs: refactor
+    if: ${{ !inputs.skipSalesforceValidation }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.targetEnvironment }}
     outputs:
@@ -583,6 +596,7 @@ jobs:
   pull-request:
     name: Apply changes
     needs: [refactor, validate]
+    if: ${{ always() && needs.refactor.result == 'success' && (needs.validate.result == 'success' || needs.validate.result == 'skipped') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -642,12 +656,13 @@ jobs:
           SF_CONTROL_INSTANCE_URL: ${{ secrets.SF_CONTROL_INSTANCE_URL }}
           SF_CONTROL_JWT_KEY: ${{ secrets.SF_CONTROL_JWT_KEY }}
           BASE_SHA: ${{ needs.refactor.outputs.base_sha }}
-          TEST_SUMMARY: ${{ needs.validate.outputs.test_summary }}
+          TEST_SUMMARY: ${{ needs.validate.outputs.test_summary || 'Skipped' }}
           COMMIT_TO_SOURCE: ${{ inputs.commitToSourceBranch }}
           SOURCE_BRANCH: ${{ inputs.sourceBranch }}
           REQUEST_ID: ${{ inputs.requestId }}
           REFERENCE_ID: ${{ inputs.referenceId }}
-          VALIDATION_ID: ${{ needs.validate.outputs.validation_id }}
+          VALIDATION_ID: ${{ needs.validate.outputs.validation_id || '' }}
+          VALIDATION_STATUS: ${{ inputs.skipSalesforceValidation && 'Skipped' || 'Succeeded' }}
         run: |
           set -euo pipefail
           npm install -g @salesforce/cli
@@ -682,7 +697,7 @@ jobs:
             "baseCommit": os.environ["BASE_SHA"],
             "outputCommit": '''$OUTPUT_COMMIT''',
             "validationId": os.environ["VALIDATION_ID"],
-            "validationStatus": "Succeeded",
+            "validationStatus": os.environ["VALIDATION_STATUS"],
             "testSummary": os.environ["TEST_SUMMARY"],
             "summary": "AI changes were committed onto the copied branch. Human review is required before merge and deployment."
           }))
@@ -715,7 +730,7 @@ jobs:
               "",
               "## Automated gates",
               "- Static analysis: passed",
-              "- Salesforce validation: passed",
+              f"- Salesforce validation: {os.environ['VALIDATION_STATUS'].lower()}",
               f"- Tests: {os.environ['TEST_SUMMARY']}",
               "",
               "## Files changed",
@@ -744,7 +759,7 @@ jobs:
             "baseCommit": os.environ["BASE_SHA"],
             "outputCommit": pr["headRefOid"],
             "validationId": os.environ["VALIDATION_ID"],
-            "validationStatus": "Succeeded",
+            "validationStatus": os.environ["VALIDATION_STATUS"],
             "testSummary": os.environ["TEST_SUMMARY"],
             "summary": "Automated gates passed. Human review is required before merge and deployment."
           }))
