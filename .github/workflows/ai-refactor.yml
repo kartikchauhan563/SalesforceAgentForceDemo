@@ -50,6 +50,7 @@ jobs:
       base_sha: ${{ steps.base.outputs.sha }}
     steps:
       - name: Validate inputs
+        working-directory: ${{ github.workspace }}
         env:
           REQUEST_ID: ${{ inputs.requestId }}
           REFERENCE_ID: ${{ inputs.referenceId }}
