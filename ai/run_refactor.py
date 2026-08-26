@@ -82,8 +82,8 @@ def call_model(system_prompt: str, user_prompt: str) -> str:
         raise SystemExit(
             "AI_API_KEY is not set. The AI refactor job cannot run without an approved model credential."
         )
-    base = os.environ.get("AI_API_BASE_URL", "https://api.openai.com/v1").rstrip("/")
-    model = os.environ.get("AI_MODEL", "gpt-4.1")
+    base = (os.environ.get("AI_API_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
+    model = os.environ.get("AI_MODEL") or "gpt-4.1"
     payload = {
         "model": model,
         "temperature": 0.1,
@@ -177,7 +177,7 @@ def main() -> int:
     summary = {
         "promptTemplates": select_templates(args.component_path, args.requirement),
         "promptVersion": "2.0.0",
-        "model": os.environ.get("AI_MODEL", "gpt-4.1"),
+        "model": os.environ.get("AI_MODEL") or "gpt-4.1",
         "filesChanged": changed,
         "discoveryMode": "automatic" if automatic else "explicit",
         "candidateFiles": list(files),
