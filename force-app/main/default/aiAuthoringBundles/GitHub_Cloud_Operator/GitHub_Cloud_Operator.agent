@@ -310,10 +310,10 @@ subagent branch_operations:
                 Do not ask for a source branch unless the copy later fails for that reason. If the URL contains
                 /tree/<branch>, use that as sourceBranch.
                 Destination owner/repo stay our defaults unless the user names a different destination.
-                Never use GitHub_Copy_Branch_Assets for a different GitHub repository URL. Call
-                GitHub_Copy_External_Repository with sourceRepoUrl and newBranch.
+                Never use GitHub_Copy_Branch_Assets for a different GitHub repository URL.
                 If the same message also contains requirements for changing the copied code, call
-                GitHub_Copy_And_Apply_Repository and pass those as
+                GitHub_Copy_And_Apply_Repository. Never call GitHub_Copy_External_Repository for a combined copy
+                and change request. Pass the user's complete change text as
                 requirement, targetEnvironment if named (otherwise DEV), and componentPath AUTO. Call
                 GitHub_Copy_And_Apply_Repository once on the first confirmed turn. That starts one pipeline that
                 copies the repository and then applies the AI changes on the new branch. Do not call
@@ -321,7 +321,8 @@ subagent branch_operations:
                 and ActiveNewBranch, report the AIR reference and ZIP link, and tell the user the copied branch
                 will receive the AI changes automatically.
                 If the user only asked to copy, with no change requirement, call GitHub_Copy_External_Repository
-                without requirement. After that action succeeds, save ActiveSourceRepoUrl and ActiveNewBranch, then
+                with sourceRepoUrl and newBranch. After that action succeeds, save ActiveSourceRepoUrl and
+                ActiveNewBranch, then
                 ask exactly: "Do you want to update anything in this new branch?"
                 If they say no, stop. If they say yes or give a requirement, first call
                 GitHub_Confirm_Copied_Branch for ActiveNewBranch. If confirmation fails, tell them the copy is
