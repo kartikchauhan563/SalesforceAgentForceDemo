@@ -297,6 +297,26 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: refactor-workspace
+          path: ${{ runner.temp }}/refactor-workspace
+
+      - name: Materialize generated source
+        run: |
+          set -euo pipefail
+          ARTIFACT_ROOT="${{ runner.temp }}/refactor-workspace"
+          if [ -d "$ARTIFACT_ROOT/force-app" ]; then
+            GENERATED_ROOT="$ARTIFACT_ROOT"
+          elif [ -d "$ARTIFACT_ROOT/work/force-app" ]; then
+            GENERATED_ROOT="$ARTIFACT_ROOT/work"
+          else
+            echo "The refactor artifact does not contain force-app." >&2
+            exit 1
+          fi
+          cp -R "$GENERATED_ROOT/force-app/." force-app/
+          for file in ai-summary.json request.json; do
+            if [ -f "$GENERATED_ROOT/$file" ]; then
+              cp "$GENERATED_ROOT/$file" "$file"
+            fi
+          done
 
       - uses: actions/setup-python@v5
         with:
@@ -373,8 +393,10 @@ jobs:
             --test-level "$TEST_LEVEL" \
             "${TEST_ARGS[@]}" \
             --json > validation-result.json || true
-          python .ci-tools/scripts/parse_validation.py --input validation-result.json --out validation-summary.json
-          STATUS=$?
+          STATUS=0
+          python .ci-tools/scripts/parse_validation.py \
+            --input validation-result.json \
+            --out validation-summary.json || STATUS=$?
           if [ $STATUS -ne 0 ]; then
             python .ci-tools/scripts/salesforce_callback.py \
               --requestId "${{ inputs.requestId }}" \
@@ -417,6 +439,26 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: refactor-workspace
+          path: ${{ runner.temp }}/refactor-workspace
+
+      - name: Materialize generated source
+        run: |
+          set -euo pipefail
+          ARTIFACT_ROOT="${{ runner.temp }}/refactor-workspace"
+          if [ -d "$ARTIFACT_ROOT/force-app" ]; then
+            GENERATED_ROOT="$ARTIFACT_ROOT"
+          elif [ -d "$ARTIFACT_ROOT/work/force-app" ]; then
+            GENERATED_ROOT="$ARTIFACT_ROOT/work"
+          else
+            echo "The refactor artifact does not contain force-app." >&2
+            exit 1
+          fi
+          cp -R "$GENERATED_ROOT/force-app/." force-app/
+          for file in ai-summary.json request.json; do
+            if [ -f "$GENERATED_ROOT/$file" ]; then
+              cp "$GENERATED_ROOT/$file" "$file"
+            fi
+          done
 
       - uses: actions/setup-python@v5
         with:
