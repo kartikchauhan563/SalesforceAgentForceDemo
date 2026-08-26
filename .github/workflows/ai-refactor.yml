@@ -75,6 +75,7 @@ jobs:
     # Keep the AI job on the dedicated internal runner; downstream validation
     # and PR creation continue on isolated GitHub-hosted runners.
     runs-on: [self-hosted, Windows, X64, pwc-network]
+    environment: ${{ inputs.targetEnvironment }}
     defaults:
       run:
         shell: bash
@@ -247,6 +248,82 @@ jobs:
               --errorSummary "AI changed a blocked path or exceeded change limits."
             exit 1
           fi
+
+      - name: Prepare pre-validation project
+        run: |
+          set -euo pipefail
+          if [ ! -f sfdx-project.json ]; then
+            cp .ci-tools/sfdx-project.json sfdx-project.json
+            echo "sfdx-project.json" >> .git/info/exclude
+          fi
+          python - <<'PY'
+          import json
+          request = json.load(open("request.json", encoding="utf-8"))
+          open("prevalidation-requirement.txt", "w", encoding="utf-8").write(
+              request["requirement"]
+          )
+          PY
+
+      - name: Authenticate pre-validation target
+        env:
+          TARGET_IS_CONTROL: ${{ inputs.targetEnvironment == 'DEV' }}
+          SF_CLIENT_ID: ${{ secrets.SF_CLIENT_ID }}
+          SF_USERNAME: ${{ secrets.SF_USERNAME }}
+          SF_INSTANCE_URL: ${{ secrets.SF_INSTANCE_URL }}
+          SF_JWT_KEY: ${{ secrets.SF_JWT_KEY }}
+        run: |
+          set -euo pipefail
+          if [ "$TARGET_IS_CONTROL" = "true" ]; then
+            echo "SF_PREVALIDATION_TARGET_ORG=control-org" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          python - <<'PY'
+          import os, tempfile, subprocess
+          from pathlib import Path
+          key = os.environ["SF_JWT_KEY"].replace("\\n", "\n")
+          path = Path(tempfile.mkstemp(suffix=".key")[1])
+          path.write_text(key)
+          try:
+              subprocess.run([
+                  "sf", "org", "login", "jwt",
+                  "--client-id", os.environ["SF_CLIENT_ID"],
+                  "--jwt-key-file", str(path),
+                  "--username", os.environ["SF_USERNAME"],
+                  "--instance-url", os.environ["SF_INSTANCE_URL"],
+                  "--alias", "prevalidation-target"
+              ], check=True)
+          finally:
+              path.unlink(missing_ok=True)
+          PY
+          echo "SF_PREVALIDATION_TARGET_ORG=prevalidation-target" >> "$GITHUB_ENV"
+
+      - name: Repair tests and coverage before final validation
+        env:
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_API_BASE_URL: ${{ vars.AI_API_BASE_URL }}
+          AI_API_URL: ${{ vars.AI_API_URL }}
+          AI_MODEL: ${{ vars.AI_MODEL }}
+        run: |
+          set -euo pipefail
+          COMPONENT_PATH="$(python -c 'import json;print(json.load(open("request.json"))["componentPath"] or "AUTO")')"
+          if ! REPAIR_OUTPUT=$(python .ci-tools/scripts/prevalidate_and_repair.py \
+              --base "${{ steps.base.outputs.sha }}" \
+              --target-org "$SF_PREVALIDATION_TARGET_ORG" \
+              --component-path "$COMPONENT_PATH" \
+              --requirement-file prevalidation-requirement.txt \
+              --target-environment "${{ inputs.targetEnvironment }}" \
+              --max-repairs 2 2>&1); then
+            printf '%s\n' "$REPAIR_OUTPUT"
+            ERROR_SUMMARY=$(printf '%s\n' "$REPAIR_OUTPUT" | tail -n 20 | tr '\n' ' ')
+            python .ci-tools/scripts/salesforce_callback.py \
+              --requestId "${{ inputs.requestId }}" \
+              --referenceId "${{ inputs.referenceId }}" \
+              --workflowRunId "${GITHUB_RUN_ID}" \
+              --status "Refactor Failed" \
+              --errorSummary "${ERROR_SUMMARY:0:1000}"
+            exit 1
+          fi
+          printf '%s\n' "$REPAIR_OUTPUT"
 
       - name: Static analysis
         run: |
@@ -458,14 +535,17 @@ jobs:
             fi
           fi
           SOURCE_ARGS=()
-          for source_dir in \
-            force-app/main/default/classes \
-            force-app/main/default/customPermissions \
-            force-app/main/default/permissionsets; do
-            if [ -d "$source_dir" ]; then
-              SOURCE_ARGS+=(--source-dir "$source_dir")
+          if [ -d force-app/main/default/classes ]; then
+            SOURCE_ARGS+=(--source-dir force-app/main/default/classes)
+          fi
+          while IFS= read -r dependency; do
+            if [ -n "$dependency" ]; then
+              SOURCE_ARGS+=(--source-dir "$dependency")
             fi
-          done
+          done < <(
+            python .ci-tools/scripts/select_validation_dependencies.py \
+              --root force-app
+          )
           if [ "${#SOURCE_ARGS[@]}" -gt 0 ]; then
             sf project deploy start \
               "${SOURCE_ARGS[@]}" \

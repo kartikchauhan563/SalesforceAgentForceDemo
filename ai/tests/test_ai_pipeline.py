@@ -17,6 +17,8 @@ from validate_changes import missing_apex_tests
 SCRIPTS_DIR = AI_DIR.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS_DIR))
 from select_apex_tests import has_apex_production_changes, test_classes
+from select_validation_dependencies import dependencies
+from prevalidate_and_repair import repair_requirement, validation_command
 
 
 class DiscoveryTest(unittest.TestCase):
@@ -268,6 +270,73 @@ name: unsafe
         self.assertFalse(missing_apex_tests(with_test))
         self.assertTrue(has_apex_production_changes(with_test))
         self.assertEqual(["LoanServiceTest"], test_classes(with_test))
+
+    def test_validation_dependencies_exclude_unrelated_permission_sets(self) -> None:
+        default_root = self.root / "force-app" / "main" / "default"
+        custom_root = default_root / "customPermissions"
+        permission_root = default_root / "permissionsets"
+        custom_root.mkdir(parents=True)
+        permission_root.mkdir()
+        custom_permission = (
+            custom_root
+            / "View_Org_License_Summary.customPermission-meta.xml"
+        )
+        custom_permission.write_text("<CustomPermission/>", encoding="utf-8")
+        relevant = permission_root / "Org_License_Agent_User.permissionset-meta.xml"
+        relevant.write_text(
+            """
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+  <customPermissions>
+    <enabled>true</enabled>
+    <name>View_Org_License_Summary</name>
+  </customPermissions>
+</PermissionSet>
+""".strip(),
+            encoding="utf-8",
+        )
+        unrelated = permission_root / "externalReact.permissionset-meta.xml"
+        unrelated.write_text(
+            """
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+  <classAccesses>
+    <apexClass>MissingClass</apexClass>
+    <enabled>true</enabled>
+  </classAccesses>
+</PermissionSet>
+""".strip(),
+            encoding="utf-8",
+        )
+
+        selected = dependencies(self.root / "force-app")
+
+        self.assertEqual([custom_permission, relevant], selected)
+
+    def test_repair_prompt_requires_passing_tests_and_coverage(self) -> None:
+        prompt = repair_requirement(
+            "Extend the agent.",
+            {
+                "testFailures": ["ExampleTest.testOne: assertion failed"],
+                "coverageWarnings": ["Example: Test coverage is 50%"],
+            },
+            1,
+        )
+        self.assertIn("at least 75% coverage", prompt)
+        self.assertIn("ExampleTest.testOne", prompt)
+        self.assertIn("UNTRUSTED SALESFORCE DIAGNOSTICS", prompt)
+
+    def test_validation_command_runs_selected_tests(self) -> None:
+        classes = self.root / "force-app" / "main" / "default" / "classes"
+        classes.mkdir(parents=True)
+        command = validation_command(
+            self.root,
+            "control-org",
+            ["ExampleTest"],
+            True,
+            False,
+        )
+        self.assertIn("RunSpecifiedTests", command)
+        self.assertIn("ExampleTest", command)
+        self.assertIn("--dry-run", command)
 
 
 if __name__ == "__main__":

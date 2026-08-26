@@ -19,6 +19,11 @@ def summarize(payload: dict) -> dict:
         or result.get("tests")
         or []
     )
+    coverage_warnings = (
+        (details.get("runTestResult") or {}).get("codeCoverageWarnings")
+        or result.get("codeCoverageWarnings")
+        or []
+    )
     tests_ran = (
         (details.get("runTestResult") or {}).get("numTestsRun")
         or result.get("numberTestsTotal")
@@ -44,12 +49,21 @@ def summarize(payload: dict) -> dict:
             test_names.append(f"{test_name}: {message}" if message else test_name)
         else:
             test_names.append(str(failure))
+    coverage_messages = []
+    for warning in coverage_warnings[:20]:
+        if isinstance(warning, dict):
+            name = warning.get("name") or "Apex"
+            message = warning.get("message") or "Coverage requirement failed."
+            coverage_messages.append(f"{name}: {message}")
+        else:
+            coverage_messages.append(str(warning))
     summary = {
         "success": success,
         "id": result.get("id"),
         "status": "Succeeded" if success else "Failed",
         "componentFailures": failures,
         "testFailures": test_names,
+        "coverageWarnings": coverage_messages,
         "testsRun": tests_ran,
         "message": (
             "Salesforce validation succeeded."
@@ -57,7 +71,11 @@ def summarize(payload: dict) -> dict:
             else (
                 str(provider_message)
                 if provider_message
-                else f"Salesforce validation failed because {len(test_names) or len(failures)} check(s) failed."
+                else (
+                    "Salesforce validation failed because "
+                    f"{len(test_names) + len(failures) + len(coverage_messages)} "
+                    "check(s) failed."
+                )
             )
         ),
     }
@@ -77,6 +95,9 @@ def main() -> int:
     if summary.get("testFailures"):
         print("Tests:")
         print("\n".join(summary["testFailures"]))
+    if summary.get("coverageWarnings"):
+        print("Coverage:")
+        print("\n".join(summary["coverageWarnings"]))
     return 0 if summary["success"] else 1
 
 
