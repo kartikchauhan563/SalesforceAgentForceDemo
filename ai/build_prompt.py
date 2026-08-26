@@ -15,6 +15,13 @@ Change-minimization rules:
 - avoid unrelated refactoring;
 - do not rewrite whole modules without necessity.
 
+Test-integrity rules:
+- every existing test class must still compile and pass after your change;
+- when you rename a symbol, change a method signature, or change the data a
+  method returns, update every test that exercises it, including its assertions;
+- add tests that cover behavior you introduce;
+- never weaken or delete a test to make validation pass.
+
 Security rules:
 - never read credentials;
 - never output credentials;
