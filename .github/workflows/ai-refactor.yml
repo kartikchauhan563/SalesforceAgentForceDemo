@@ -25,6 +25,39 @@ on:
       targetEnvironment:
         required: true
         type: string
+      commitToSourceBranch:
+        description: Commit AI changes onto sourceBranch instead of opening a separate PR branch
+        required: false
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      requestId:
+        required: true
+        type: string
+      referenceId:
+        required: true
+        type: string
+      repository:
+        required: true
+        type: string
+      sourceBranch:
+        required: true
+        type: string
+      componentPath:
+        required: false
+        default: AUTO
+        type: string
+      requirement:
+        required: true
+        type: string
+      targetEnvironment:
+        required: true
+        type: string
+      commitToSourceBranch:
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -118,11 +151,13 @@ jobs:
           SF_CONTROL_USERNAME: ${{ secrets.SF_CONTROL_USERNAME }}
           SF_CONTROL_INSTANCE_URL: ${{ secrets.SF_CONTROL_INSTANCE_URL }}
           SF_CONTROL_JWT_KEY: ${{ secrets.SF_CONTROL_JWT_KEY }}
+          SF_TARGET_USERNAME: ${{ inputs.targetEnvironment == 'DEV' && secrets.SF_CONTROL_USERNAME || secrets.SF_USERNAME }}
         run: |
           set -euo pipefail
           npm install -g @salesforce/cli
           python .ci-tools/scripts/sf_control_login.py > /dev/null
           echo "SF_CONTROL_TARGET_ORG=control-org" >> "$GITHUB_ENV"
+          echo "SF_TARGET_USERNAME=$SF_TARGET_USERNAME" >> "$GITHUB_ENV"
 
       - name: Load canonical request from Salesforce
         env:
@@ -375,7 +410,7 @@ jobs:
                 API_NAME="$(basename "$(dirname "$changed_file")")"
                 if ! sf agent validate authoring-bundle \
                   --api-name "$API_NAME" \
-                  --target-org target-org \
+                  --target-org "$SF_TARGET_USERNAME" \
                   --json > agent-validation-result.json; then
                   AGENT_ERROR="$(python -c 'import json; d=json.load(open("agent-validation-result.json")); print((d.get("message") or "Agent Script validation failed.")[:1000])')"
                   python .ci-tools/scripts/salesforce_callback.py \
@@ -409,7 +444,7 @@ jobs:
           fi
           sf project deploy start \
             --source-dir force-app/main/default/classes \
-            --target-org target-org \
+            --target-org "$SF_TARGET_USERNAME" \
             --dry-run \
             --test-level "$TEST_LEVEL" \
             "${TEST_ARGS[@]}" \
@@ -436,7 +471,7 @@ jobs:
           echo "tests=$(python -c 'import json;d=json.load(open("validation-summary.json"));print(str(d.get("testsRun"))+" tests")')" >> "$GITHUB_OUTPUT"
 
   pull-request:
-    name: Create pull request
+    name: Apply changes
     needs: [refactor, validate]
     runs-on: ubuntu-latest
     steps:
@@ -489,7 +524,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Create branch, commit, and PR
+      - name: Commit changes
         env:
           GH_TOKEN: ${{ github.token }}
           SF_CONTROL_CLIENT_ID: ${{ secrets.SF_CONTROL_CLIENT_ID }}
@@ -498,26 +533,60 @@ jobs:
           SF_CONTROL_JWT_KEY: ${{ secrets.SF_CONTROL_JWT_KEY }}
           BASE_SHA: ${{ needs.refactor.outputs.base_sha }}
           TEST_SUMMARY: ${{ needs.validate.outputs.test_summary }}
+          COMMIT_TO_SOURCE: ${{ inputs.commitToSourceBranch }}
+          SOURCE_BRANCH: ${{ inputs.sourceBranch }}
+          REQUEST_ID: ${{ inputs.requestId }}
+          REFERENCE_ID: ${{ inputs.referenceId }}
+          VALIDATION_ID: ${{ needs.validate.outputs.validation_id }}
         run: |
           set -euo pipefail
           npm install -g @salesforce/cli
           python .ci-tools/scripts/sf_control_login.py > /dev/null
           export SF_CONTROL_TARGET_ORG=control-org
-          BRANCH="ai-refactor/${{ inputs.referenceId }}"
           git config user.name "AI Refactor Bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -B "$BRANCH"
           git add -- force-app
           if git diff --cached --quiet; then
             python .ci-tools/scripts/salesforce_callback.py \
-              --requestId "${{ inputs.requestId }}" \
-              --referenceId "${{ inputs.referenceId }}" \
+              --requestId "$REQUEST_ID" \
+              --referenceId "$REFERENCE_ID" \
               --workflowRunId "${GITHUB_RUN_ID}" \
               --status "PR Creation Failed" \
               --errorSummary "No source changes were available to commit."
             exit 1
           fi
-          git commit -m "AI Refactor ${{ inputs.referenceId }}"
+          git commit -m "AI Refactor ${REFERENCE_ID}"
+          if [ "$COMMIT_TO_SOURCE" = "true" ]; then
+            git push origin "HEAD:${SOURCE_BRANCH}"
+            OUTPUT_COMMIT=$(git rev-parse HEAD)
+            BRANCH_URL="https://github.com/${GITHUB_REPOSITORY}/tree/${SOURCE_BRANCH}"
+            python .ci-tools/scripts/salesforce_callback.py --payload-json "$(python - <<PY
+          import json, os
+          print(json.dumps({
+            "requestId": os.environ["REQUEST_ID"],
+            "referenceId": os.environ["REFERENCE_ID"],
+            "workflowRunId": os.environ["GITHUB_RUN_ID"],
+            "status": "PR Created",
+            "branch": os.environ["SOURCE_BRANCH"],
+            "pullRequestUrl": '''$BRANCH_URL''',
+            "baseCommit": os.environ["BASE_SHA"],
+            "outputCommit": '''$OUTPUT_COMMIT''',
+            "validationId": os.environ["VALIDATION_ID"],
+            "validationStatus": "Succeeded",
+            "testSummary": os.environ["TEST_SUMMARY"],
+            "summary": "AI changes were committed onto the copied branch. Human review is required before merge and deployment."
+          }))
+          PY
+          )"
+            python .ci-tools/scripts/salesforce_callback.py \
+              --requestId "$REQUEST_ID" \
+              --referenceId "$REFERENCE_ID" \
+              --workflowRunId "${GITHUB_RUN_ID}" \
+              --status "Awaiting Approval"
+            exit 0
+          fi
+          BRANCH="ai-refactor/${REFERENCE_ID}"
+          git checkout -B "$BRANCH"
           git push -u origin "$BRANCH" --force-with-lease
           EXISTING=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' || true)
           if [ -z "$EXISTING" ]; then
@@ -545,9 +614,9 @@ jobs:
           open("pr-body.md", "w", encoding="utf-8").write("\n".join(lines) + "\n")
           PY
             gh pr create \
-              --base "${{ inputs.sourceBranch }}" \
+              --base "${SOURCE_BRANCH}" \
               --head "$BRANCH" \
-              --title "AI Refactor - ${{ inputs.referenceId }}" \
+              --title "AI Refactor - ${REFERENCE_ID}" \
               --body-file pr-body.md
           fi
           PR_JSON=$(gh pr view "$BRANCH" --json number,url,headRefOid)
@@ -555,24 +624,24 @@ jobs:
           import json, os
           pr = json.loads('''$PR_JSON''')
           print(json.dumps({
-            "requestId": "${{ inputs.requestId }}",
-            "referenceId": "${{ inputs.referenceId }}",
+            "requestId": os.environ["REQUEST_ID"],
+            "referenceId": os.environ["REFERENCE_ID"],
             "workflowRunId": os.environ["GITHUB_RUN_ID"],
             "status": "PR Created",
             "branch": "$BRANCH",
             "pullRequestNumber": pr["number"],
             "pullRequestUrl": pr["url"],
-            "baseCommit": "${{ needs.refactor.outputs.base_sha }}",
+            "baseCommit": os.environ["BASE_SHA"],
             "outputCommit": pr["headRefOid"],
-            "validationId": "${{ needs.validate.outputs.validation_id }}",
+            "validationId": os.environ["VALIDATION_ID"],
             "validationStatus": "Succeeded",
-            "testSummary": "${{ needs.validate.outputs.test_summary }}",
+            "testSummary": os.environ["TEST_SUMMARY"],
             "summary": "Automated gates passed. Human review is required before merge and deployment."
           }))
           PY
           )"
           python .ci-tools/scripts/salesforce_callback.py \
-            --requestId "${{ inputs.requestId }}" \
-            --referenceId "${{ inputs.referenceId }}" \
+            --requestId "$REQUEST_ID" \
+            --referenceId "$REFERENCE_ID" \
             --workflowRunId "${GITHUB_RUN_ID}" \
             --status "Awaiting Approval"

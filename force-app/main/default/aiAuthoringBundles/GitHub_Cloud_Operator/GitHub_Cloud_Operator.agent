@@ -108,9 +108,10 @@ start_agent agent_router:
               A request that combines an external repository copy with a later implementation requirement must
               always start in branch_operations, even when it also contains words such as change, implement,
               refactor, or update. Copy the repository first. Never submit the combined request directly to
-              intelligent_refactor and never use master as its source branch. Only after the copy action succeeds
-              and ActiveNewBranch contains the copied branch may the implementation requirement be submitted to
-              intelligent_refactor using ActiveNewBranch as sourceBranch.
+              intelligent_refactor and never use master as its source branch. On that first confirmed turn, pass
+              the user's change text as requirement to GitHub_Copy_External_Repository so one pipeline copies the
+              repo and then applies AI changes on the new branch. Do not wait for a second turn to submit the
+              requirement when the user already described the change.
               Route requests that ask you to write a specific new Salesforce component such as a flow, Apex class,
               trigger, or LWC and put that code into a new branch to branch_operations. That route writes the file
               immediately and returns a download link in the same reply.
@@ -311,13 +312,16 @@ subagent branch_operations:
                 Destination owner/repo stay our defaults unless the user names a different destination.
                 Never use GitHub_Copy_Branch_Assets for a different GitHub repository URL. Call
                 GitHub_Copy_External_Repository with sourceRepoUrl and newBranch.
-                If the same message also contains requirements for changing the copied code, do not submit those
-                requirements before the copy. On the first confirmed turn call only
-                GitHub_Copy_External_Repository. A refactor submitted before the copy would incorrectly inspect
-                master. Preserve the requirement in the conversation, report the copy result, and ask the user to
-                confirm that the copied branch should now be updated.
-                After that action succeeds, save ActiveSourceRepoUrl and ActiveNewBranch, then ask exactly:
-                "Do you want to update anything in this new branch?"
+                If the same message also contains requirements for changing the copied code, pass those as
+                requirement, targetEnvironment if named (otherwise DEV), and componentPath AUTO. Call
+                GitHub_Copy_External_Repository once on the first confirmed turn. That starts one pipeline that
+                copies the repository and then applies the AI changes on the new branch. Do not call
+                intelligent_refactor for that combined request. After the action succeeds, save ActiveSourceRepoUrl
+                and ActiveNewBranch, report the AIR reference and ZIP link, and tell the user the copied branch
+                will receive the AI changes automatically.
+                If the user only asked to copy, with no change requirement, call GitHub_Copy_External_Repository
+                without requirement. After that action succeeds, save ActiveSourceRepoUrl and ActiveNewBranch, then
+                ask exactly: "Do you want to update anything in this new branch?"
                 If they say no, stop. If they say yes or give a requirement, first call
                 GitHub_Confirm_Copied_Branch for ActiveNewBranch. If confirmation fails, tell them the copy is
                 still running and ask them to say "confirm the copy" again. If confirmation succeeds and they
@@ -573,7 +577,7 @@ subagent branch_operations:
 
         GitHub_Copy_External_Repository:
             label: "GitHub Copy External Repository"
-            description: "Copies complete code from a GitHub repository URL into our repository as a new branch."
+            description: "Copies complete code from a GitHub repository URL into our repository as a new branch. Pass requirement to copy and apply AI changes in one pipeline."
             target: "apex://GitHubAction_CopyExternalRepo"
             require_user_confirmation: True
             include_in_progress_indicator: True
@@ -603,6 +607,18 @@ subagent branch_operations:
                     label: "Owner And Repo"
                     description: "Destination identifier such as kartikchauhan563/SalesforceAgentForceDemo."
                     is_required: False
+                requirement: string
+                    label: "Requirement"
+                    description: "Natural-language changes to apply with AI on the copied branch. Include this when the user already described the change."
+                    is_required: False
+                targetEnvironment: string
+                    label: "Target Environment"
+                    description: "Salesforce validation target. Use DEV unless the user names QA, UAT, or PROD."
+                    is_required: False
+                componentPath: string
+                    label: "Component Path"
+                    description: "Optional path hint. Use AUTO when the files are unknown."
+                    is_required: False
             outputs:
                 success: boolean
                     label: "Success"
@@ -618,6 +634,14 @@ subagent branch_operations:
                     filter_from_agent: False
                 branchZipUrl: string
                     label: "Download ZIP URL"
+                    is_displayable: True
+                    filter_from_agent: False
+                requestId: string
+                    label: "Request Id"
+                    is_displayable: False
+                    filter_from_agent: False
+                referenceId: string
+                    label: "Reference Id"
                     is_displayable: True
                     filter_from_agent: False
 

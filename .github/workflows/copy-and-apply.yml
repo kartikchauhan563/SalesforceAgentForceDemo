@@ -1,0 +1,140 @@
+name: Copy And Apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      sourceRepoUrl:
+        description: HTTPS GitHub repository URL to copy from
+        required: true
+        type: string
+      sourceBranch:
+        description: Optional source branch. Empty uses the source default branch.
+        required: false
+        default: ""
+        type: string
+      destBranch:
+        description: New branch in this repository that receives the complete copy
+        required: true
+        type: string
+      requirement:
+        description: Natural-language changes to apply with AI on the copied branch
+        required: false
+        default: ""
+        type: string
+      requestId:
+        description: Salesforce AI_Refactor_Request__c Id
+        required: false
+        default: ""
+        type: string
+      referenceId:
+        description: AIR reference such as AIR-000123
+        required: false
+        default: ""
+        type: string
+      repository:
+        description: Destination owner/repo
+        required: false
+        default: ""
+        type: string
+      componentPath:
+        description: Optional component path hint
+        required: false
+        default: AUTO
+        type: string
+      targetEnvironment:
+        description: Salesforce validation target
+        required: false
+        default: DEV
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: copy-and-apply-${{ inputs.destBranch }}
+  cancel-in-progress: false
+
+jobs:
+  copy:
+    name: Copy complete repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate inputs
+        env:
+          SOURCE_URL: ${{ inputs.sourceRepoUrl }}
+          SOURCE_BRANCH: ${{ inputs.sourceBranch }}
+          DEST_BRANCH: ${{ inputs.destBranch }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$SOURCE_URL" =~ ^https://github\.com/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ ]]; then
+            echo "sourceRepoUrl must be https://github.com/owner/repo"
+            exit 1
+          fi
+          if [[ ! "$DEST_BRANCH" =~ ^[A-Za-z0-9./_-]+$ ]]; then
+            echo "destBranch contains unsupported characters"
+            exit 1
+          fi
+          if [[ -n "$SOURCE_BRANCH" && ! "$SOURCE_BRANCH" =~ ^[A-Za-z0-9./_-]+$ ]]; then
+            echo "sourceBranch contains unsupported characters"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Copy source files onto a new branch
+        env:
+          SOURCE_URL: ${{ inputs.sourceRepoUrl }}
+          SOURCE_BRANCH: ${{ inputs.sourceBranch }}
+          DEST_BRANCH: ${{ inputs.destBranch }}
+          EXTERNAL_REPO_TOKEN: ${{ secrets.EXTERNAL_REPO_TOKEN }}
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code origin "refs/heads/${DEST_BRANCH}" >/dev/null 2>&1; then
+            echo "Destination branch ${DEST_BRANCH} already exists"
+            exit 1
+          fi
+
+          clone_args=(--depth 1)
+          if [[ -n "$SOURCE_BRANCH" ]]; then
+            clone_args+=(--branch "$SOURCE_BRANCH")
+          fi
+          clone_url="$SOURCE_URL"
+          if [[ -n "${EXTERNAL_REPO_TOKEN:-}" ]]; then
+            clone_url="https://x-access-token:${EXTERNAL_REPO_TOKEN}@github.com/${SOURCE_URL#https://github.com/}.git"
+          fi
+          git clone "${clone_args[@]}" "$clone_url" /tmp/src-repo
+
+          git checkout --orphan "$DEST_BRANCH"
+          git rm -rf --ignore-unmatch . >/dev/null 2>&1 || true
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+          rsync -a --exclude '.git' /tmp/src-repo/ ./
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Source repository did not contain any files to copy"
+            exit 1
+          fi
+          git commit -m "Copy complete repository from ${SOURCE_URL}"
+          git push -u origin "$DEST_BRANCH"
+
+  apply:
+    name: Apply AI changes on copied branch
+    needs: copy
+    if: ${{ inputs.requirement != '' && inputs.requestId != '' }}
+    uses: ./.github/workflows/ai-refactor.yml
+    with:
+      requestId: ${{ inputs.requestId }}
+      referenceId: ${{ inputs.referenceId }}
+      repository: ${{ inputs.repository }}
+      sourceBranch: ${{ inputs.destBranch }}
+      componentPath: ${{ inputs.componentPath }}
+      requirement: ${{ inputs.requirement }}
+      targetEnvironment: ${{ inputs.targetEnvironment }}
+      commitToSourceBranch: true
+    secrets: inherit
