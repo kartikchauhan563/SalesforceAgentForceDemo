@@ -108,7 +108,7 @@ start_agent agent_router:
               A request that combines an external repository copy with a later implementation requirement must
               always start in branch_operations, even when it also contains words such as change, implement,
               refactor, or update. Copy the repository first. Never submit the combined request directly to
-              intelligent_refactor and never use master as its source branch. On that first confirmed turn, pass
+              intelligent_refactor and never use master as its source branch. On that same turn, pass
               the user's change text as requirement to GitHub_Copy_And_Apply_Repository so one pipeline copies the
               repo and then applies AI changes on the new branch. Do not wait for a second turn to submit the
               requirement when the user already described the change.
@@ -312,17 +312,16 @@ subagent branch_operations:
                 Destination owner/repo stay our defaults unless the user names a different destination.
                 Never use GitHub_Copy_Branch_Assets for a different GitHub repository URL.
                 If the same message also contains requirements for changing the copied code, call
-                GitHub_Copy_And_Apply_Repository. Never call GitHub_Copy_External_Repository for a combined copy
-                and change request. Pass the user's complete change text as
+                GitHub_Copy_And_Apply_Repository. Pass the user's complete change text as
                 requirement, targetEnvironment if named (otherwise DEV), and componentPath AUTO. Call
-                GitHub_Copy_And_Apply_Repository once on the first confirmed turn. That starts one pipeline that
+                GitHub_Copy_And_Apply_Repository once on that same turn. That starts one pipeline that
                 copies the repository and then applies the AI changes on the new branch. Do not call
                 intelligent_refactor for that combined request. After the action succeeds, save ActiveSourceRepoUrl
                 and ActiveNewBranch, report the AIR reference and ZIP link, and tell the user the copied branch
                 will receive the AI changes automatically.
-                If the user only asked to copy, with no change requirement, call GitHub_Copy_External_Repository
-                with sourceRepoUrl and newBranch. After that action succeeds, save ActiveSourceRepoUrl and
-                ActiveNewBranch, then
+                If the user only asked to copy, with no change requirement, call
+                GitHub_Copy_And_Apply_Repository with requirement = COPY_ONLY. After that action succeeds, save
+                ActiveSourceRepoUrl and ActiveNewBranch, then
                 ask exactly: "Do you want to update anything in this new branch?"
                 If they say no, stop. If they say yes or give a requirement, first call
                 GitHub_Confirm_Copied_Branch for ActiveNewBranch. If confirmation fails, tell them the copy is
@@ -396,13 +395,16 @@ subagent branch_operations:
                 with ownerRepo = ...
                 with newBranch = ...
                 with sourceBranch = ...
-            GitHub_Copy_External_Repository: @actions.GitHub_Copy_External_Repository
+            GitHub_Copy_And_Apply_Repository: @actions.GitHub_Copy_And_Apply_Repository
                 with sourceRepoUrl = ...
                 with sourceBranch = ...
                 with newBranch = ...
                 with owner = ...
                 with repo = ...
                 with ownerRepo = ...
+                with requirement = ...
+                with targetEnvironment = ...
+                with componentPath = ...
             GitHub_Confirm_Copied_Branch: @actions.GitHub_Confirm_Copied_Branch
                 with owner = ...
                 with repo = ...
@@ -579,9 +581,9 @@ subagent branch_operations:
 
         GitHub_Copy_And_Apply_Repository:
             label: "GitHub Copy And Apply Repository"
-            description: "Runs one pipeline that copies a repository to a new branch and applies the required AI changes on that same branch."
+            description: "The only action for copying an external repository. It copies to a new branch and applies AI changes there; use requirement COPY_ONLY when no changes were requested."
             target: "apex://GitHubAction_CopyAndApplyRepo"
-            require_user_confirmation: True
+            require_user_confirmation: False
             include_in_progress_indicator: True
             progress_indicator_message: "Copying the complete repository into a new branch"
             inputs:
@@ -644,56 +646,6 @@ subagent branch_operations:
                     filter_from_agent: False
                 referenceId: string
                     label: "Reference Id"
-                    is_displayable: True
-                    filter_from_agent: False
-
-        GitHub_Copy_External_Repository:
-            label: "GitHub Copy External Repository"
-            description: "Copies complete code from a GitHub repository URL into our repository as a new branch without applying changes."
-            target: "apex://GitHubAction_CopyExternalRepo"
-            require_user_confirmation: True
-            include_in_progress_indicator: True
-            progress_indicator_message: "Copying the complete repository into a new branch"
-            inputs:
-                sourceRepoUrl: string
-                    label: "Source Repository URL"
-                    description: "GitHub URL to copy from, such as https://github.com/owner/repo."
-                    is_required: True
-                sourceBranch: string
-                    label: "Source Branch"
-                    description: "Optional branch in the source repository."
-                    is_required: False
-                newBranch: string
-                    label: "New Branch"
-                    description: "Destination branch in our repository that receives the complete copy."
-                    is_required: True
-                owner: string
-                    label: "Owner"
-                    description: "Destination GitHub owner. Leave empty to use kartikchauhan563."
-                    is_required: False
-                repo: string
-                    label: "Repository"
-                    description: "Destination repository name or owner/repo."
-                    is_required: False
-                ownerRepo: string
-                    label: "Owner And Repo"
-                    description: "Destination identifier such as kartikchauhan563/SalesforceAgentForceDemo."
-                    is_required: False
-            outputs:
-                success: boolean
-                    label: "Success"
-                    is_displayable: False
-                    filter_from_agent: False
-                message: string
-                    label: "Message"
-                    is_displayable: True
-                    filter_from_agent: False
-                detailsJson: string
-                    label: "Details JSON"
-                    is_displayable: False
-                    filter_from_agent: False
-                branchZipUrl: string
-                    label: "Download ZIP URL"
                     is_displayable: True
                     filter_from_agent: False
 

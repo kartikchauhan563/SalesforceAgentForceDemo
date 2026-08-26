@@ -43,6 +43,9 @@ public with sharing class GitHubAction_CopyAndApplyRepo {
         Request req = (requests == null || requests.isEmpty() || requests[0] == null)
             ? new Request()
             : requests[0];
+        String changeRequest = 'COPY_ONLY'.equalsIgnoreCase(req.requirement)
+            ? null
+            : req.requirement;
         GitHubCloudService.Result result = GitHubCloudService.copyExternalRepository(
             req.sourceRepoUrl,
             req.sourceBranch,
@@ -50,7 +53,7 @@ public with sharing class GitHubAction_CopyAndApplyRepo {
             req.owner,
             req.repo,
             req.ownerRepo,
-            req.requirement,
+            changeRequest,
             req.targetEnvironment,
             req.componentPath
         );

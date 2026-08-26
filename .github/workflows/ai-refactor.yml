@@ -308,6 +308,8 @@ jobs:
     needs: refactor
     runs-on: ubuntu-latest
     environment: ${{ inputs.targetEnvironment }}
+    env:
+      SF_TARGET_USERNAME: ${{ inputs.targetEnvironment == 'DEV' && secrets.SF_CONTROL_USERNAME || secrets.SF_USERNAME }}
     outputs:
       validation_id: ${{ steps.parse.outputs.id }}
       test_summary: ${{ steps.parse.outputs.tests }}
