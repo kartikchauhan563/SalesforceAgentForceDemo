@@ -24,6 +24,12 @@ def summarize(payload: dict) -> dict:
         or result.get("numberTestsTotal")
         or 0
     )
+    provider_message = (
+        result.get("message")
+        or result.get("errorMessage")
+        or payload.get("message")
+        or payload.get("errorMessage")
+    )
     success = bool(result.get("success") or payload.get("status") == 0)
     failures = []
     for failure in component_failures[:20]:
@@ -43,9 +49,15 @@ def summarize(payload: dict) -> dict:
         "componentFailures": failures,
         "testFailures": test_names,
         "testsRun": tests_ran,
-        "message": "Salesforce validation succeeded."
-        if success
-        else f"Salesforce validation failed because {len(test_names) or len(failures)} check(s) failed.",
+        "message": (
+            "Salesforce validation succeeded."
+            if success
+            else (
+                str(provider_message)
+                if provider_message
+                else f"Salesforce validation failed because {len(test_names) or len(failures)} check(s) failed."
+            )
+        ),
     }
     return summary
 

@@ -72,7 +72,11 @@ AGENTFORCE_REQUIREMENT_MARKERS = (
 def is_agentforce_request(path: str, requirement: str) -> bool:
     if any(marker in path for marker in AGENTFORCE_PATH_MARKERS):
         return True
-    return any(marker in requirement for marker in AGENTFORCE_REQUIREMENT_MARKERS)
+    if any(marker in requirement for marker in AGENTFORCE_REQUIREMENT_MARKERS):
+        return True
+    return "agent" in requirement and any(
+        marker in requirement for marker in ("rename", "topic", "action", "instruction")
+    )
 
 
 def select_templates(component_path: str, requirement: str) -> list[str]:

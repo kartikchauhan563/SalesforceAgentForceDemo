@@ -368,7 +368,28 @@ jobs:
             --referenceId "${{ inputs.referenceId }}" \
             --workflowRunId "${GITHUB_RUN_ID}" \
             --status "Salesforce Validation"
-          python .ci-tools/scripts/generate_delta.py --base "${{ needs.refactor.outputs.base_sha }}" --head HEAD --out delta
+          git add -A
+          while IFS= read -r changed_file; do
+            case "$changed_file" in
+              force-app/*/aiAuthoringBundles/*/*.agent)
+                API_NAME="$(basename "$(dirname "$changed_file")")"
+                if ! sf agent validate authoring-bundle \
+                  --api-name "$API_NAME" \
+                  --target-org target-org \
+                  --json > agent-validation-result.json; then
+                  AGENT_ERROR="$(python -c 'import json; d=json.load(open("agent-validation-result.json")); print((d.get("message") or "Agent Script validation failed.")[:1000])')"
+                  python .ci-tools/scripts/salesforce_callback.py \
+                    --requestId "${{ inputs.requestId }}" \
+                    --referenceId "${{ inputs.referenceId }}" \
+                    --workflowRunId "${GITHUB_RUN_ID}" \
+                    --status "Salesforce Validation Failed" \
+                    --validationStatus "Failed" \
+                    --errorSummary "$AGENT_ERROR"
+                  exit 1
+                fi
+                ;;
+            esac
+          done < <(git diff --cached --name-only "${{ needs.refactor.outputs.base_sha }}")
           python .ci-tools/scripts/select_apex_tests.py \
             --base "${{ needs.refactor.outputs.base_sha }}" \
             --out selected-tests.json
@@ -387,7 +408,7 @@ jobs:
             fi
           fi
           sf project deploy start \
-            --source-dir delta/force-app \
+            --source-dir force-app/main/default/classes \
             --target-org target-org \
             --dry-run \
             --test-level "$TEST_LEVEL" \

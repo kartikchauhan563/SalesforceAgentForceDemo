@@ -168,6 +168,13 @@ def main() -> int:
         + "USER REQUIREMENT:\n"
         + args.requirement
         + REQUIREMENT_SUFFIX,
+        (
+            "Compilation requirements are mandatory: never put more than one @InvocableMethod "
+            "in an Apex class; create a separate action class and test class for each additional "
+            "invocable action. Return complete working implementations only—no placeholders, "
+            "TODOs, empty result stubs, pseudocode, or comments standing in for logic. Preserve "
+            "all existing behavior while adding the requested behavior."
+        ),
         "Analyze the requirement and the candidate Salesforce source below. Modify every component required for a complete implementation, including tests and metadata companions.",
         "The candidate list was generated from repository-wide lexical and dependency signals. Ignore irrelevant candidates.",
         "You may create a new file only under an approved Salesforce source directory when the requirement genuinely needs it.",
