@@ -80,9 +80,9 @@ concurrency:
 jobs:
   refactor:
     name: AI refactor
-    # The configured AI endpoint is an internal PwC service and requires the
-    # network-connected self-hosted runner.
-    runs-on: [self-hosted, Windows, X64]
+    # Use GitHub-hosted infrastructure so the job is schedulable without a
+    # dedicated self-hosted runner.
+    runs-on: ubuntu-latest
     environment: ${{ inputs.targetEnvironment }}
     defaults:
       run:
