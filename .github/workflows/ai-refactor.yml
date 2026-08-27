@@ -80,10 +80,9 @@ concurrency:
 jobs:
   refactor:
     name: AI refactor
-    # The approved model endpoint is only resolvable from the PwC network.
-    # Keep the AI job on the dedicated internal runner; downstream validation
-    # and PR creation continue on isolated GitHub-hosted runners.
-    runs-on: [self-hosted, Windows, X64, pwc-network]
+    # Run the AI job on GitHub-hosted infrastructure. The AI endpoint and all
+    # required credentials must be reachable from this runner.
+    runs-on: ubuntu-latest
     environment: ${{ inputs.targetEnvironment }}
     defaults:
       run:
@@ -148,12 +147,10 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Use runner Python
-        run: |
-          PYTHON_EXE="$(py -3 -c 'import sys; print(sys.executable)')"
-          PYTHON_DIR="$(cygpath -w "$(dirname "$(cygpath -u "$PYTHON_EXE")")")"
-          echo "$PYTHON_DIR" >> "$GITHUB_PATH"
-          py -3 --version
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
       - name: Control-plane login
         env:
