@@ -80,9 +80,9 @@ concurrency:
 jobs:
   refactor:
     name: AI refactor
-    # Run the AI job on GitHub-hosted infrastructure. The AI endpoint and all
-    # required credentials must be reachable from this runner.
-    runs-on: ubuntu-latest
+    # The configured AI endpoint is an internal PwC service and requires the
+    # network-connected self-hosted runner.
+    runs-on: [self-hosted, Windows, X64, pwc-network]
     environment: ${{ inputs.targetEnvironment }}
     defaults:
       run:
@@ -214,10 +214,10 @@ jobs:
 
       - name: Run AI coding agent
         env:
-          AI_API_KEY: ${{ secrets.AI_API_KEY }}
-          AI_API_BASE_URL: ${{ vars.AI_API_BASE_URL }}
-          AI_API_URL: ${{ vars.AI_API_URL }}
-          AI_MODEL: ${{ vars.AI_MODEL }}
+          AI_API_KEY: ${{ secrets.LLM_API_KEY || secrets.AI_API_KEY }}
+          AI_API_BASE_URL: ${{ vars.LLM_API_BASE_URL || vars.AI_API_BASE_URL }}
+          AI_API_URL: ${{ vars.LLM_API_URL || vars.AI_API_URL }}
+          AI_MODEL: ${{ vars.LLM_MODEL || vars.AI_MODEL }}
         run: |
           set -euo pipefail
           ERROR_SUMMARY=""
@@ -308,10 +308,10 @@ jobs:
       - name: Repair tests and coverage before final validation
         if: ${{ !inputs.skipSalesforceValidation }}
         env:
-          AI_API_KEY: ${{ secrets.AI_API_KEY }}
-          AI_API_BASE_URL: ${{ vars.AI_API_BASE_URL }}
-          AI_API_URL: ${{ vars.AI_API_URL }}
-          AI_MODEL: ${{ vars.AI_MODEL }}
+          AI_API_KEY: ${{ secrets.LLM_API_KEY || secrets.AI_API_KEY }}
+          AI_API_BASE_URL: ${{ vars.LLM_API_BASE_URL || vars.AI_API_BASE_URL }}
+          AI_API_URL: ${{ vars.LLM_API_URL || vars.AI_API_URL }}
+          AI_MODEL: ${{ vars.LLM_MODEL || vars.AI_MODEL }}
         run: |
           set -euo pipefail
           COMPONENT_PATH="$(python -c 'import json;print(json.load(open("request.json"))["componentPath"] or "AUTO")')"
