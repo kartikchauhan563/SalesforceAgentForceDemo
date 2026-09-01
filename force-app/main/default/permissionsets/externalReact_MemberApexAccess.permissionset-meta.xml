@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>External React Member Apex Access</label>
+    <description>Grants authenticated External React site members execute access to the Apex REST classes that report the signed-in user and the org's license capacity. Required because site members inherit no Apex access from the Customer Community profile.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <customPermissions>
+        <enabled>true</enabled>
+        <name>View_Org_License_Summary</name>
+    </customPermissions>
+    <classAccesses>
+        <apexClass>UIBundleCurrentUser</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>OrgLicenseResource</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <!--
+        Apex REST and the Data SDK both refuse a caller without API Enabled, and
+        the Customer Community profile does not grant it. Without this the site
+        answers 403 for every signed-in member and the app reads them as guests.
+    -->
+    <userPermissions>
+        <enabled>true</enabled>
+        <name>ApiEnabled</name>
+    </userPermissions>
+</PermissionSet>
