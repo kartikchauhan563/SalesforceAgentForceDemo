@@ -1,0 +1,146 @@
+name: Salesforce OAuth Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      requestId:
+        required: true
+        type: string
+      referenceId:
+        required: true
+        type: string
+      repository:
+        required: true
+        type: string
+      branch:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oauth-deploy-${{ inputs.requestId }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Validate and deploy approved metadata
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Salesforce CLI
+        run: npm install -g @salesforce/cli
+
+      - name: Authenticate control org and claim target session
+        run: |
+          set -euo pipefail
+          python scripts/sf_control_login.py > control-auth.json
+          export SF_CONTROL_ACCESS_TOKEN=$(python -c 'import json; print(json.load(open("control-auth.json"))["accessToken"])')
+          export SF_CONTROL_INSTANCE_URL=$(python -c 'import json; print(json.load(open("control-auth.json"))["instanceUrl"])')
+          echo "::add-mask::$SF_CONTROL_ACCESS_TOKEN"
+          python scripts/oauth_deploy_control.py claim --request-id "${{ inputs.requestId }}" > claim.json
+          python - <<'PY'
+          import json, os, sys
+          claim = json.load(open("claim.json"))
+          if claim["repository"] != os.environ["GITHUB_REPOSITORY"]:
+              raise SystemExit("Claimed repository does not match this workflow repository.")
+          if claim["branch"] != os.environ["EXPECTED_BRANCH"]:
+              raise SystemExit("Claimed branch does not match the dispatched branch.")
+          json.dump(claim["componentPaths"], open("approved-paths.json", "w"))
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              env.write("SF_TARGET_INSTANCE_URL=" + claim["instanceUrl"] + "\n")
+              env.write("SF_TARGET_IS_SANDBOX=" + str(bool(claim.get("isSandbox"))).lower() + "\n")
+          print("::add-mask::" + claim["accessToken"])
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              env.write("SF_ACCESS_TOKEN=" + claim["accessToken"] + "\n")
+          PY
+          rm -f claim.json control-auth.json
+        env:
+          SF_CONTROL_CLIENT_ID: ${{ secrets.SF_CONTROL_CLIENT_ID }}
+          SF_CONTROL_USERNAME: ${{ secrets.SF_CONTROL_USERNAME }}
+          SF_CONTROL_INSTANCE_URL: ${{ secrets.SF_CONTROL_INSTANCE_URL }}
+          SF_CONTROL_JWT_KEY: ${{ secrets.SF_CONTROL_JWT_KEY }}
+          EXPECTED_BRANCH: ${{ inputs.branch }}
+
+      - name: Authenticate authorized target org
+        run: |
+          sf org login access-token \
+            --instance-url "$SF_TARGET_INSTANCE_URL" \
+            --alias target-org \
+            --no-prompt
+
+      - name: Validate and deploy selected metadata
+        env:
+          SF_CONTROL_CLIENT_ID: ${{ secrets.SF_CONTROL_CLIENT_ID }}
+          SF_CONTROL_USERNAME: ${{ secrets.SF_CONTROL_USERNAME }}
+          SF_CONTROL_INSTANCE_URL: ${{ secrets.SF_CONTROL_INSTANCE_URL }}
+          SF_CONTROL_JWT_KEY: ${{ secrets.SF_CONTROL_JWT_KEY }}
+        run: |
+          set -euo pipefail
+          python scripts/sf_control_login.py > control-auth.json
+          export SF_CONTROL_ACCESS_TOKEN=$(python -c 'import json; print(json.load(open("control-auth.json"))["accessToken"])')
+          export SF_CONTROL_INSTANCE_URL=$(python -c 'import json; print(json.load(open("control-auth.json"))["instanceUrl"])')
+          echo "::add-mask::$SF_CONTROL_ACCESS_TOKEN"
+
+          TEST_LEVEL="RunLocalTests"
+          if [ "$SF_TARGET_IS_SANDBOX" = "true" ]; then TEST_LEVEL="NoTestRun"; fi
+
+          set +e
+          python scripts/deploy_selected_metadata.py \
+            --mode validate --paths-file approved-paths.json --target-org target-org \
+            --test-level "$TEST_LEVEL" --output validation-result.json
+          VALIDATE_EXIT=$?
+          set -e
+          VALIDATION_ID=$(python -c 'import json; d=json.load(open("validation-result.json")); print((d.get("result") or {}).get("id") or "")')
+          VALIDATION_MESSAGE=$(python -c 'import json; d=json.load(open("validation-result.json")); print((d.get("message") or (d.get("result") or {}).get("status") or "Validation completed")[:30000])')
+          if [ "$VALIDATE_EXIT" -ne 0 ]; then
+            python scripts/oauth_deploy_control.py status \
+              --request-id "${{ inputs.requestId }}" --workflow-run-id "$GITHUB_RUN_ID" \
+              --status Failed --validation-id "$VALIDATION_ID" --error-message "$VALIDATION_MESSAGE"
+            exit "$VALIDATE_EXIT"
+          fi
+
+          python scripts/oauth_deploy_control.py status \
+            --request-id "${{ inputs.requestId }}" --workflow-run-id "$GITHUB_RUN_ID" \
+            --status Deploying --validation-id "$VALIDATION_ID" --result "$VALIDATION_MESSAGE"
+
+          set +e
+          python scripts/deploy_selected_metadata.py \
+            --mode deploy --paths-file approved-paths.json --target-org target-org \
+            --test-level "$TEST_LEVEL" --output deployment-result.json
+          DEPLOY_EXIT=$?
+          set -e
+          DEPLOYMENT_ID=$(python -c 'import json; d=json.load(open("deployment-result.json")); print((d.get("result") or {}).get("id") or "")')
+          DEPLOYMENT_MESSAGE=$(python -c 'import json; d=json.load(open("deployment-result.json")); print((d.get("message") or (d.get("result") or {}).get("status") or "Deployment completed")[:30000])')
+          if [ "$DEPLOY_EXIT" -eq 0 ]; then
+            python scripts/oauth_deploy_control.py status \
+              --request-id "${{ inputs.requestId }}" --workflow-run-id "$GITHUB_RUN_ID" \
+              --status Succeeded --validation-id "$VALIDATION_ID" \
+              --deployment-id "$DEPLOYMENT_ID" --result "$DEPLOYMENT_MESSAGE"
+          else
+            python scripts/oauth_deploy_control.py status \
+              --request-id "${{ inputs.requestId }}" --workflow-run-id "$GITHUB_RUN_ID" \
+              --status Failed --validation-id "$VALIDATION_ID" \
+              --deployment-id "$DEPLOYMENT_ID" --error-message "$DEPLOYMENT_MESSAGE"
+            exit "$DEPLOY_EXIT"
+          fi
+
+      - name: Remove local credentials
+        if: always()
+        run: |
+          sf org logout --target-org target-org --no-prompt || true
+          sf org logout --target-org control-org --no-prompt || true
+          rm -f claim.json control-auth.json approved-paths.json validation-result.json deployment-result.json

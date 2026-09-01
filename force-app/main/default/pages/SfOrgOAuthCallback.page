@@ -1,0 +1,7 @@
+<apex:page controller="SfOrgOAuthCallbackController" action="{!complete}" showHeader="false" sidebar="false" applyHtmlTag="true">
+    <div style="font-family: Salesforce Sans, Arial, sans-serif; max-width: 560px; margin: 48px auto; padding: 24px;">
+        <h1>{!heading}</h1>
+        <p>{!detail}</p>
+        <p>You can close this tab and return to the agent.</p>
+    </div>
+</apex:page>

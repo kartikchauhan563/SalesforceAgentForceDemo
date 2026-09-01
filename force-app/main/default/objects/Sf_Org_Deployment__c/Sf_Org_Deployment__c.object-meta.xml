@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Tracks a confirmation-gated deployment of selected GitHub metadata to an OAuth-authorized Salesforce org.</description>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableHistory>true</enableHistory>
+    <enableReports>true</enableReports>
+    <enableSearch>true</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>true</enableStreamingApi>
+    <label>Salesforce Org Deployment</label>
+    <nameField>
+        <displayFormat>SFD-{000000}</displayFormat>
+        <label>Deployment Reference</label>
+        <type>AutoNumber</type>
+    </nameField>
+    <pluralLabel>Salesforce Org Deployments</pluralLabel>
+    <sharingModel>Private</sharingModel>
+</CustomObject>

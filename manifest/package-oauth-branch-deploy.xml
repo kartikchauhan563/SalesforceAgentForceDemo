@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>GitHubCloudService</members>
+        <members>GitHubAction_CopyBranchAssets</members>
+        <members>GitHubAction_CopyFolder</members>
+        <members>GitHubAction_CreateComponent</members>
+        <members>GitHubWorkflowService</members>
+        <members>GitHubOAuthDeployQueueable</members>
+        <members>GitHubAction_DeployToAuthorizedOrg</members>
+        <members>GitHubAction_DeploymentStatus</members>
+        <members>SfOrgOAuthService</members>
+        <members>SfOrgDeployService</members>
+        <members>SfOrgDeployRest</members>
+        <members>SfOrgDeployTest</members>
+        <name>ApexClass</name>
+    </types>
+    <types>
+        <members>Sf_Org_Deployment__c</members>
+        <name>CustomObject</name>
+    </types>
+    <types>
+        <members>Sf_Org_Connection__c.Is_Sandbox__c</members>
+        <name>CustomField</name>
+    </types>
+    <types>
+        <members>AI_Refactor_Integration</members>
+        <members>Connect_With_Salesforce_Org_Access</members>
+        <members>GitHub_Cloud_Agent_Access</members>
+        <members>GitHub_Cloud_Agent_User</members>
+        <name>PermissionSet</name>
+    </types>
+    <version>66.0</version>
+</Package>

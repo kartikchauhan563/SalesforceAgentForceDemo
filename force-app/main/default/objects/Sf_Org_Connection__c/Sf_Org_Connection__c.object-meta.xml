@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Stores an OAuth connection from the Connect With Salesforce Org agent to an external Salesforce org.</description>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableHistory>false</enableHistory>
+    <enableReports>false</enableReports>
+    <enableSearch>false</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>true</enableStreamingApi>
+    <label>Salesforce Org Connection</label>
+    <nameField>
+        <displayFormat>SFO-{000000}</displayFormat>
+        <label>Connection Number</label>
+        <type>AutoNumber</type>
+    </nameField>
+    <pluralLabel>Salesforce Org Connections</pluralLabel>
+    <sharingModel>Private</sharingModel>
+</CustomObject>
