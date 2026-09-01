@@ -64,6 +64,9 @@ class SelectedMetadataTests(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/salesforce-oauth-deploy.yml").read_text()
         self.assertIn("::add-mask::$SF_CONTROL_ACCESS_TOKEN", workflow)
         self.assertIn('print("::add-mask::" + claim["accessToken"])', workflow)
+        self.assertIn("github.event.repository.default_branch", workflow)
+        self.assertIn("sparse-checkout: scripts", workflow)
+        self.assertLess(workflow.index("ref: ${{ inputs.branch }}"), workflow.index("sparse-checkout: scripts"))
         self.assertLess(workflow.index("--mode validate"), workflow.index("--mode deploy"))
         self.assertNotIn("accessToken:", workflow)
 

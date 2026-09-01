@@ -28,10 +28,26 @@ jobs:
     name: Validate and deploy approved metadata
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout destination branch metadata
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch }}
           fetch-depth: 1
+
+      - name: Overlay control scripts from default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: scripts
+          sparse-checkout-cone-mode: true
+          path: .oauth-deploy-scripts
+
+      - name: Use control scripts from default branch
+        run: |
+          set -euo pipefail
+          rm -rf scripts
+          mkdir -p scripts
+          cp -R .oauth-deploy-scripts/scripts/. scripts/
 
       - uses: actions/setup-node@v4
         with:
