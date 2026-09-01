@@ -62,8 +62,9 @@ class SelectedMetadataTests(unittest.TestCase):
 
     def test_workflow_masks_tokens_and_validates_before_deploy(self):
         workflow = (ROOT / ".github/workflows/salesforce-oauth-deploy.yml").read_text()
-        self.assertIn("::add-mask::$SF_CONTROL_ACCESS_TOKEN", workflow)
         self.assertIn('print("::add-mask::" + claim["accessToken"])', workflow)
+        self.assertNotIn("SF_CONTROL_ACCESS_TOKEN", workflow)
+        self.assertIn("SF_CONTROL_TARGET_ORG=control-org", workflow)
         self.assertIn("github.event.repository.default_branch", workflow)
         self.assertIn("sparse-checkout: scripts", workflow)
         self.assertLess(workflow.index("ref: ${{ inputs.branch }}"), workflow.index("sparse-checkout: scripts"))
