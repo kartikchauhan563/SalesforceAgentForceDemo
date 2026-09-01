@@ -63,10 +63,8 @@ jobs:
       - name: Authenticate control org and claim target session
         run: |
           set -euo pipefail
-          python scripts/sf_control_login.py > control-auth.json
-          export SF_CONTROL_ACCESS_TOKEN=$(python -c 'import json; print(json.load(open("control-auth.json"))["accessToken"])')
-          export SF_CONTROL_INSTANCE_URL=$(python -c 'import json; print(json.load(open("control-auth.json"))["instanceUrl"])')
-          echo "::add-mask::$SF_CONTROL_ACCESS_TOKEN"
+          python scripts/sf_control_login.py > /dev/null
+          export SF_CONTROL_TARGET_ORG=control-org
           python scripts/oauth_deploy_control.py claim --request-id "${{ inputs.requestId }}" > claim.json
           python - <<'PY'
           import json, os, sys
@@ -83,7 +81,7 @@ jobs:
           with open(os.environ["GITHUB_ENV"], "a") as env:
               env.write("SF_ACCESS_TOKEN=" + claim["accessToken"] + "\n")
           PY
-          rm -f claim.json control-auth.json
+          rm -f claim.json
         env:
           SF_CONTROL_CLIENT_ID: ${{ secrets.SF_CONTROL_CLIENT_ID }}
           SF_CONTROL_USERNAME: ${{ secrets.SF_CONTROL_USERNAME }}
@@ -106,10 +104,8 @@ jobs:
           SF_CONTROL_JWT_KEY: ${{ secrets.SF_CONTROL_JWT_KEY }}
         run: |
           set -euo pipefail
-          python scripts/sf_control_login.py > control-auth.json
-          export SF_CONTROL_ACCESS_TOKEN=$(python -c 'import json; print(json.load(open("control-auth.json"))["accessToken"])')
-          export SF_CONTROL_INSTANCE_URL=$(python -c 'import json; print(json.load(open("control-auth.json"))["instanceUrl"])')
-          echo "::add-mask::$SF_CONTROL_ACCESS_TOKEN"
+          python scripts/sf_control_login.py > /dev/null
+          export SF_CONTROL_TARGET_ORG=control-org
 
           TEST_LEVEL="RunLocalTests"
           if [ "$SF_TARGET_IS_SANDBOX" = "true" ]; then TEST_LEVEL="NoTestRun"; fi
