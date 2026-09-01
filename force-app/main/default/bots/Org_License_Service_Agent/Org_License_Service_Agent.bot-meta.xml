@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bot xmlns="http://soap.sforce.com/2006/04/metadata">
+    <agentDSLEnabled>true</agentDSLEnabled>
+    <agentType>EinsteinServiceAgent</agentType>
+    <botMlDomain>
+        <label>Org License Service Agent</label>
+        <name>Org_License_Service_Agent</name>
+    </botMlDomain>
+    <botSource>None</botSource>
+    <botUser>org.license.agent.00dbm00000sie4meac@example.com</botUser>
+    <description>Answers basic questions about approved Salesforce organization user-license totals, used counts, and remaining capacity. Read-only.</description>
+    <label>Org License Service Agent</label>
+    <logPrivateConversationData>false</logPrivateConversationData>
+    <richContentEnabled>true</richContentEnabled>
+    <sessionTimeout>0</sessionTimeout>
+    <type>ExternalCopilot</type>
+</Bot>

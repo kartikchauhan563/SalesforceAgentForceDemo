@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bot xmlns="http://soap.sforce.com/2006/04/metadata">
+    <agentDSLEnabled>true</agentDSLEnabled>
+    <agentType>AgentforceEmployeeAgent</agentType>
+    <botMlDomain>
+        <label>Org License Assistant</label>
+        <name>Org_License_Assistant</name>
+    </botMlDomain>
+    <botSource>None</botSource>
+    <description>Answers basic questions about approved Salesforce organization user-license totals, used counts, and remaining capacity. Read-only.</description>
+    <label>Org License Assistant</label>
+    <logPrivateConversationData>false</logPrivateConversationData>
+    <richContentEnabled>true</richContentEnabled>
+    <sessionTimeout>0</sessionTimeout>
+    <type>InternalCopilot</type>
+</Bot>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Queue xmlns="http://soap.sforce.com/2006/04/metadata">
+    <name>Org License Chat Fallback</name>
+    <description>Required fallback for the Org License messaging channel. The Agentforce service agent handles every conversation, so work only lands here if the agent is unavailable.</description>
+    <doesSendEmailToMembers>false</doesSendEmailToMembers>
+    <queueRoutingConfig>Org_License_Chat_Routing</queueRoutingConfig>
+    <queueSobject>
+        <sobjectType>MessagingSession</sobjectType>
+    </queueSobject>
+</Queue>
