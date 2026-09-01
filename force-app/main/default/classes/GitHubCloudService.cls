@@ -9,6 +9,9 @@ public with sharing class GitHubCloudService {
         public String branchZipUrl;
         public String requestId;
         public String referenceId;
+        public String repository;
+        public String branch;
+        public String componentPaths;
     }
 
     public static String branchZipDownloadUrl(String ownerRepo, String branch) {
@@ -234,6 +237,9 @@ public with sharing class GitHubCloudService {
                 }
             );
             result.branchZipUrl = zipUrl;
+            result.repository = target.owner + '/' + target.repo;
+            result.branch = toBranch;
+            result.componentPaths = JSON.serialize(new List<String>{ path });
             return result;
         } catch (GitHubCloudClient.CalloutException ex) {
             return fail(ex.getMessage());
@@ -931,6 +937,9 @@ public with sharing class GitHubCloudService {
                 }
             );
             copied.branchZipUrl = zipUrl;
+            copied.repository = target.owner + '/' + target.repo;
+            copied.branch = toBranch;
+            copied.componentPaths = JSON.serialize(new List<String>{ 'force-app' });
             return copied;
         } catch (GitHubCloudClient.CalloutException ex) {
             return fail(ex.getMessage());
@@ -1098,7 +1107,7 @@ public with sharing class GitHubCloudService {
                 outcomeNote = ' Branch "' + toBranch + '" was created containing only that folder.';
             }
 
-            return ok(
+            Result copied = ok(
                 source.note + 'Copied ' + entries.size() + ' file(s) from folder "' + folder + '" on "' +
                 source.branch + '" into branch "' + toBranch + '" in ' + target.owner + '/' + target.repo +
                 '.' + outcomeNote + ' ' + branchUrl(target, toBranch) + '/' + folder,
@@ -1116,6 +1125,10 @@ public with sharing class GitHubCloudService {
                     'htmlUrl' => branchUrl(target, toBranch) + '/' + folder
                 }
             );
+            copied.repository = target.owner + '/' + target.repo;
+            copied.branch = toBranch;
+            copied.componentPaths = JSON.serialize(new List<String>{ folder });
+            return copied;
         } catch (GitHubCloudClient.CalloutException ex) {
             return fail(ex.getMessage());
         }

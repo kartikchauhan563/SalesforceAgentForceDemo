@@ -17,6 +17,29 @@ public with sharing class GitHubWorkflowService {
         return dispatch(record, true, false);
     }
 
+    public static DispatchResult dispatchOAuthDeploy(Sf_Org_Deployment__c record) {
+        List<String> parts = record.Repository__c == null
+            ? new List<String>()
+            : record.Repository__c.split('/');
+        if (parts.size() != 2) {
+            return fail('Repository must be stored as organization/name.');
+        }
+        GitHubCloudConfig.RepoTarget cfg = GitHubCloudConfig.defaults();
+        return postDispatch(
+            cfg.namedCredential,
+            parts[0],
+            parts[1],
+            'salesforce-oauth-deploy.yml',
+            cfg.baseBranch,
+            new Map<String, Object>{
+                'requestId' => String.valueOf(record.Id),
+                'referenceId' => record.Name,
+                'repository' => record.Repository__c,
+                'branch' => record.Branch__c
+            }
+        );
+    }
+
     public static DispatchResult dispatchCopyAndApply(
         AI_Refactor_Request__c record,
         String sourceRepoUrl,

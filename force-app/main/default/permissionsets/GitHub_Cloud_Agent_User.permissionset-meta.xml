@@ -67,6 +67,35 @@
         <apexClass>GitHubAction_DescribeRepo</apexClass>
         <enabled>true</enabled>
     </classAccesses>
+    <classAccesses>
+        <apexClass>GitHubWorkflowService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>GitHubOAuthDeployQueueable</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>SfOrgDeployService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>GitHubAction_DeployToAuthorizedOrg</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>GitHubAction_DeploymentStatus</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <objectPermissions>
+        <allowCreate>true</allowCreate>
+        <allowDelete>false</allowDelete>
+        <allowEdit>true</allowEdit>
+        <allowRead>true</allowRead>
+        <modifyAllRecords>false</modifyAllRecords>
+        <object>Sf_Org_Deployment__c</object>
+        <viewAllRecords>true</viewAllRecords>
+    </objectPermissions>
     <customMetadataTypeAccesses>
         <enabled>true</enabled>
         <name>GitHub_Cloud_Config__mdt</name>
