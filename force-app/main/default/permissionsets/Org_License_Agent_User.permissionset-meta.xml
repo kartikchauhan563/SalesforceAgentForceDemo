@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <classAccesses>
+        <apexClass>OrgLicenseAgentAction</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <customPermissions>
+        <enabled>true</enabled>
+        <name>View_Org_License_Summary</name>
+    </customPermissions>
+    <description>Grants authenticated Delivery Hub users access to the narrow, read-only Agentforce organization-license action.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>Org License Agent User</label>
+</PermissionSet>
