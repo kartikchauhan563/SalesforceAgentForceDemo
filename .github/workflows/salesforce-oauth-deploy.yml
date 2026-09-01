@@ -102,10 +102,12 @@ jobs:
           SF_CONTROL_USERNAME: ${{ secrets.SF_CONTROL_USERNAME }}
           SF_CONTROL_INSTANCE_URL: ${{ secrets.SF_CONTROL_INSTANCE_URL }}
           SF_CONTROL_JWT_KEY: ${{ secrets.SF_CONTROL_JWT_KEY }}
+          OAUTH_DEPLOY_SOURCE_REF: origin/${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
           python scripts/sf_control_login.py > /dev/null
           export SF_CONTROL_TARGET_ORG=control-org
+          git fetch origin "${{ github.event.repository.default_branch }}" --depth 1
 
           TEST_LEVEL="RunLocalTests"
           if [ "$SF_TARGET_IS_SANDBOX" = "true" ]; then TEST_LEVEL="NoTestRun"; fi
