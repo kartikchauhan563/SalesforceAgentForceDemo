@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiPlannerBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Answers basic questions about approved Salesforce organization user-license totals, used counts, and remaining capacity. Read-only.</description>
+    <localTopicLinks>
+        <genAiPluginName>agent_router_16jbm000002M0Ej</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>ambiguous_question_16jbm000002M0Ej</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>license_usage_overview_16jbm000002M0Ej</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>off_topic_16jbm000002M0Ej</genAiPluginName>
+    </localTopicLinks>
+    <localTopics>
+        <fullName>off_topic_16jbm000002M0Ej</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Declines requests that are not about organization licensing.</description>
+        <developerName>off_topic_16jbm000002M0Ej</developerName>
+        <genAiPluginInstructions>
+            <description>You are a read-only Salesforce organization license assistant. You report approved user-license totals, used counts, and remaining capacity. You never modify data and never answer questions outside organization licensing.</description>
+            <developerName>instruction0_179bm000003vnlR</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179bm000003vnlR</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localDeveloperName>off_topic</localDeveloperName>
+        <masterLabel>Off Topic</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>license_usage_overview_16jbm000002M0Ej</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Provides a summary of total, used, and remaining Salesforce user licenses.</description>
+        <developerName>license_usage_overview_16jbm000002M0Ej</developerName>
+        <genAiPluginInstructions>
+            <description>You are a read-only Salesforce organization license assistant. You report approved user-license totals, used counts, and remaining capacity. You never modify data and never answer questions outside organization licensing.</description>
+            <developerName>instruction0_179bm000003vnlU</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179bm000003vnlU</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localActionLinks>
+            <functionName>get_org_license_summary_179bm000003vnlU</functionName>
+        </localActionLinks>
+        <localActions>
+            <fullName>get_org_license_summary_179bm000003vnlU</fullName>
+            <description>Returns total, used, and remaining counts for the approved Salesforce
+user-license types in this org. Read-only; it never creates, updates, or
+deletes anything. Requires no information from the user.</description>
+            <developerName>get_org_license_summary_179bm000003vnlU</developerName>
+            <invocationTarget>OrgLicenseAgentAction</invocationTarget>
+            <invocationTargetType>apex</invocationTargetType>
+            <isConfirmationRequired>false</isConfirmationRequired>
+            <isIncludeInProgressIndicator>false</isIncludeInProgressIndicator>
+            <localDeveloperName>get_org_license_summary</localDeveloperName>
+            <masterLabel>Get Org License Summary</masterLabel>
+        </localActions>
+        <localDeveloperName>license_usage_overview</localDeveloperName>
+        <masterLabel>License Usage Overview</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>ambiguous_question_16jbm000002M0Ej</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Asks for clarification when a licensing request is unclear.</description>
+        <developerName>ambiguous_question_16jbm000002M0Ej</developerName>
+        <genAiPluginInstructions>
+            <description>You are a read-only Salesforce organization license assistant. You report approved user-license totals, used counts, and remaining capacity. You never modify data and never answer questions outside organization licensing.</description>
+            <developerName>instruction0_179bm000003vnlT</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179bm000003vnlT</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localDeveloperName>ambiguous_question</localDeveloperName>
+        <masterLabel>Ambiguous Question</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>agent_router_16jbm000002M0Ej</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Routes the user to license information, or declines when the request is unrelated or unclear.</description>
+        <developerName>agent_router_16jbm000002M0Ej</developerName>
+        <genAiPluginInstructions>
+            <description>You are a read-only Salesforce organization license assistant. You report approved user-license totals, used counts, and remaining capacity. You never modify data and never answer questions outside organization licensing.</description>
+            <developerName>instruction0_179bm000003vnlS</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179bm000003vnlS</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localDeveloperName>agent_router</localDeveloperName>
+        <masterLabel>Agent Router</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <masterLabel>Org License Assistant</masterLabel>
+    <plannerType>Atlas__ConcurrentMultiAgentOrchestration</plannerType>
+</GenAiPlannerBundle>
